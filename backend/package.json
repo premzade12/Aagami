@@ -1,0 +1,35 @@
+{
+  "name": "backend",
+  "version": "1.0.0",
+  "type": "module",
+  "main": "index.js",
+  "scripts": {
+    "dev": "nodemon index.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/premzade12/Virtual_Assistant.git"
+  },
+  "author": "Prem Zade",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/premzade12/Virtual_Assistant/issues"
+  },
+  "homepage": "https://github.com/premzade12/Virtual_Assistant#readme",
+  "description": "",
+  "dependencies": {
+    "@google/generative-ai": "^0.24.1",
+    "axios": "^1.11.0",
+    "bcryptjs": "^3.0.2",
+    "cloudinary": "^2.7.0",
+    "cookie-parser": "^1.4.7",
+    "cors": "^2.8.5",
+    "dotenv": "^17.2.0",
+    "express": "^5.1.0",
+    "jsonwebtoken": "^9.0.2",
+    "moment": "^2.30.1",
+    "mongoose": "^8.16.4",
+    "multer": "^2.0.2",
+    "nodemon": "^3.1.10"
+  }
+}
