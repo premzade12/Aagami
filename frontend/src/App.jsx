@@ -6,7 +6,7 @@ import Home from './pages/Home.jsx';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import Customize from './pages/Customize.jsx';
-import { userDataContext } from './context/userContext.jsx';
+import { userDataContext } from './context/UserContext.jsx';
 import { useContext } from 'react';
 import Customize2 from './pages/Customize2.jsx';
 
