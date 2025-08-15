@@ -2,6 +2,7 @@ import User from "../models/user.model.js";
 import bcrypt from "bcryptjs";
 import genToken from "../config/token.js";
 
+// ✅ Sign Up
 export const signUp = async (req, res) => {
   try {
     const { name, email, password } = req.body;
@@ -32,12 +33,14 @@ export const signUp = async (req, res) => {
     // 5. Generate token
     const token = genToken(user._id);
 
-    // 6. Set cookie
+    // 6. Set cookie with shared domain
     res.cookie("token", token, {
       httpOnly: true,
+      secure: true,             // Render uses https
+      sameSite: "None",         // allow cross-site cookie
+      domain: ".onrender.com",  // ✅ shared between frontend & backend
+      path: "/",
       maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-      sameSite: "None",
-      secure: true,
     });
 
     // 7. Respond
@@ -47,11 +50,12 @@ export const signUp = async (req, res) => {
       email: user.email,
     });
   } catch (error) {
-    console.error("Signup Error:", error); // Log real error to console
+    console.error("Signup Error:", error);
     return res.status(500).json({ message: "Signup error: " + error.message });
   }
 };
 
+// ✅ Login
 export const Login = async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -71,12 +75,14 @@ export const Login = async (req, res) => {
     // 3. Generate token
     const token = genToken(user._id);
 
-    // 4. Set cookie
+    // 4. Set cookie with shared domain
     res.cookie("token", token, {
       httpOnly: true,
-      maxAge: 7 * 24 * 60 * 60 * 1000,
-      sameSite: "None",
       secure: true,
+      sameSite: "None",
+      domain: ".onrender.com",  // ✅ shared between frontend & backend
+      path: "/",
+      maxAge: 7 * 24 * 60 * 60 * 1000,
     });
 
     // 5. Respond
@@ -91,9 +97,16 @@ export const Login = async (req, res) => {
   }
 };
 
+// ✅ Logout
 export const logOut = async (req, res) => {
   try {
-    res.clearCookie("token");
+    res.clearCookie("token", {
+      httpOnly: true,
+      secure: true,
+      sameSite: "None",
+      domain: ".onrender.com", // clear from shared domain
+      path: "/",
+    });
     return res.status(200).json({ message: "Logout successful!" });
   } catch (error) {
     console.error("Logout Error:", error);
