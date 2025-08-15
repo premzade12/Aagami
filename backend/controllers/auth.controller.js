@@ -1,4 +1,4 @@
-edit my file and give me full code import User from "../models/user.model.js";
+import User from "../models/user.model.js";
 import bcrypt from "bcryptjs";
 import genToken from "../config/token.js";
 
