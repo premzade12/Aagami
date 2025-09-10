@@ -375,7 +375,6 @@ if (type === 'get_news') {
         </div>
         )}
 
-        //small screen 
         {/* Left Column */}
       <div className=" absolute lg:hidden md:hidden max-w-[200px] h-[200px] overflow-hidden bottom-[100px] right-full/2 flex-col items-start gap-4 ">
         <textarea
