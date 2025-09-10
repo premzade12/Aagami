@@ -36,8 +36,8 @@ export const signUp = async (req, res) => {
     res.cookie("token", token, {
       httpOnly: true,
       maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-      sameSite: "Lax",
-      secure: false,
+      sameSite: "None",
+      secure: true,
     });
 
     // 7. Respond
@@ -75,8 +75,8 @@ export const Login = async (req, res) => {
     res.cookie("token", token, {
       httpOnly: true,
       maxAge: 7 * 24 * 60 * 60 * 1000,
-      sameSite: "Lax",
-      secure: false,
+      sameSite: "None",
+      secure: true,
     });
 
     // 5. Respond
@@ -99,4 +99,4 @@ export const logOut = async (req, res) => {
     console.error("Logout Error:", error);
     return res.status(500).json({ message: "Logout error: " + error.message });
   }
-};
+}; 

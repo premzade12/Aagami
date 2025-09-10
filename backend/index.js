@@ -18,7 +18,7 @@ const app = express();
 // CORS config for frontend (Vite)
 app.use(express.json());
 app.use(cors({
-  origin: "http://localhost:5173",
+  origin: "https://virtual-assistant-biz3.onrender.com",
   credentials: true, // required for cookies
 }));
 

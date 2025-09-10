@@ -3,7 +3,7 @@ import Card from '../components/Card.jsx'
 import circle1 from "../assets/circle1.mp4"
 import circle2 from "../assets/circle3.mp4"
 import { RiVideoUploadLine } from "react-icons/ri";
-import { userDataContext } from '../context/userContext.jsx';
+import { userDataContext } from '../context/UserContext.jsx';
 import { useNavigate } from 'react-router-dom';
 import { TiArrowBack } from "react-icons/ti";
 
