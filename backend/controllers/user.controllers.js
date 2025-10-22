@@ -44,86 +44,88 @@ export const updateAssistant = async (req, res) => {
 // ✅ Ask to Assistant with memory
 export const askToAssistant = async (req, res) => {
   try {
+    console.log("✅ askToAssistant called");
+    console.log("➡️ Request body:", req.body);
+    console.log("➡️ User ID from token:", req.userId);
+
     const { command } = req.body;
-    if (!command) return res.status(400).json({ response: "Command is required" });
+    if (!command) {
+      console.error("❌ Missing command in body");
+      return res.status(400).json({ response: "Command is required." });
+    }
 
     const user = await User.findById(req.userId);
-    if (!user) return res.status(404).json({ response: "User not found." });
-
-    // Check history for direct answers (like "father's name", "my age", etc.)
-    const lowerCommand = command.toLowerCase();
-    for (let i = user.history.length - 1; i >= 0; i--) {
-      const h = user.history[i];
-      if (h.question.toLowerCase().includes(lowerCommand)) {
-        return res.status(200).json({ type: "memory", userInput: command, response: h.answer });
-      }
+    if (!user) {
+      console.error("❌ User not found");
+      return res.status(404).json({ response: "User not found." });
     }
 
-    // Prepare last 5 Q&A as context for Gemini
+    console.log("✅ User found:", user.email);
+
+    // Build history context
     let historyContext = "";
-    if (user.history.length > 0) {
+    if (user.history && user.history.length > 0) {
       const last5 = user.history.slice(-5);
-      historyContext = last5
-        .map((h) => `Q: ${h.question}\nA: ${h.answer}`)
-        .join("\n");
+      historyContext = last5.map(h => `Q: ${h.question}\nA: ${h.answer}`).join("\n");
     }
 
-    const userName = user.name;
-    const assistantName = user.assistantName;
+    const userName = user.name || "User";
+    const assistantName = user.assistantName || "Assistant";
 
+    console.log("🧠 Sending to Gemini model...");
+    console.log("🧩 Prompt:", `${historyContext}\nUser: ${command}`);
+
+    // --- call geminiResponse ---
     const result = await geminiResponse(
       `${historyContext}\nUser: ${command}`,
       assistantName,
       userName
     );
 
+    console.log("✅ Gemini response received:", result);
+
     const jsonMatch = result.match(/{[\s\S]*}/);
-    if (!jsonMatch) return res.status(400).json({ response: "Cannot understand." });
+    if (!jsonMatch) {
+      console.error("❌ Gemini response did not contain JSON");
+      return res.status(400).json({ response: "Cannot understand." });
+    }
 
     let gemResult;
     try {
       gemResult = JSON.parse(jsonMatch[0]);
     } catch (err) {
-      console.error("❌ JSON Parse Error:", err.message);
-      return res.status(400).json({ response: "Invalid Gemini response." });
+      console.error("❌ JSON parse error:", err.message);
+      return res.status(400).json({ response: "Invalid Gemini response format." });
     }
 
     const { type, userInput, response: assistantResponse } = gemResult;
 
-    // Save Q&A to history
-    user.history.push({ question: command, answer: assistantResponse || "No answer", timestamp: new Date() });
+    // Save this Q&A
+    user.history.push({ question: command, answer: assistantResponse, timestamp: new Date() });
     await user.save();
 
-    // Handle specific command types
+    console.log("✅ History updated");
+
+    // Handle command types
     switch (type) {
       case "get_date":
-        return res.json({ type, userInput, response: `Current date is ${moment().format("YYYY-MM-DD")}` });
+        return res.json({ type, response: `Current date is ${moment().format("YYYY-MM-DD")}` });
       case "get_time":
-        return res.json({ type, userInput, response: `Current time is ${moment().format("hh:mm A")}` });
+        return res.json({ type, response: `Current time is ${moment().format("hh:mm A")}` });
       case "get_day":
-        return res.json({ type, userInput, response: `Today is ${moment().format("dddd")}` });
+        return res.json({ type, response: `Today is ${moment().format("dddd")}` });
       case "get_month":
-        return res.json({ type, userInput, response: `Current month is ${moment().format("MMMM")}` });
-      case "sing_song":
-        const lyrics = [
-          "🎵 Tum se hi, tum se hi...",
-          "🎵 Kamariya lachke re...",
-          "🎵 Dil Diyan Gallan, karange naal naal beh ke...",
-          "🎵 Let me love you, and I will love you...",
-          "🎵 Ooo Antava Mava Ooo Oo Antava...",
-        ];
-        const randomLyric = lyrics[Math.floor(Math.random() * lyrics.length)];
-        return res.json({ type, userInput, response: assistantResponse || randomLyric });
-      case "correct_code":
-        return res.json({ type, userInput: "", response: "Okay, I will correct your code now." });
+        return res.json({ type, response: `Current month is ${moment().format("MMMM")}` });
+      case "general":
       default:
-        return res.json({ type, userInput, response: assistantResponse || "Okay." });
+        return res.json({ type, response: assistantResponse || "Okay." });
     }
   } catch (error) {
-    console.error("❌ AskToAssistant error:", error.message);
-    return res.status(500).json({ response: "Internal server error." });
+    console.error("❌ askToAssistant error:", error);
+    res.status(500).json({ response: "Internal server error.", error: error.message });
   }
 };
+
 
 // ✅ Correct Code
 export const correctCode = async (req, res) => {
