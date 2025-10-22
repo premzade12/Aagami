@@ -87,66 +87,92 @@ function Home() {
   };
 
   const handleSubmit = async () => {
-    const value = inputValue.current.trim();
-    if (!value) return;
+  const value = inputValue.current.trim();
+  if (!value) return;
 
-    setUserText(value);
-    setAiText("");
-    setResponse("");
-    setShowOutput(true);
-    setLoading(true);
+  setUserText(value);
+  setAiText("");
+  setResponse("");
+  setShowOutput(true);
+  setLoading(true);
 
-    const history = await fetchHistory();
-    const last5 = history.slice(-5);
-    const contextString = last5.map((h) => `Q: ${h.question}\nA: ${h.answer}`).join("\n");
+  // ✅ Fetch last 5 Q&A for context
+  const history = await fetchHistory();
+  const last5 = history.slice(-5);
 
-    let data;
-    try {
-      const res = await fetch(`${serverUrl}/api/user/askToAssistant`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({ command: `${contextString}\nUser: ${value}` }),
-      });
-      data = await res.json();
-    } catch (err) {
-      console.error("Failed to get assistant response:", err);
-      setLoading(false);
-      return;
-    }
+  // Use the correct property names from your history
+  const contextString = last5
+    .filter(h => h.userInput && h.assistantResponse) // ignore invalid entries
+    .map(h => `Q: ${h.userInput}\nA: ${h.assistantResponse}`)
+    .join("\n");
 
-    if (!data) return;
-
-    setAiText(data.response);
-    inputRef.current?.focus();
-    inputRef.current?.scrollIntoView();
-
-    if (data.type === "correct_code") {
-      if (!value) {
-        speak("❌ Please paste your code first.");
-        setResponse("❌ Please paste your code first.");
-      } else {
-        try {
-          const res = await fetch(`${serverUrl}/api/user/correct-code`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            credentials: "include",
-            body: JSON.stringify({ code: value }),
-          });
-          const json = await res.json();
-          setResponse(json.corrected || "No correction provided.");
-        } catch (err) {
-          setResponse("Failed to correct code.");
-        }
-      }
-    } else {
-      await handleCommand(data);
-      setResponse(data.response);
-    }
-
-    speak(data.response);
+  let data;
+  try {
+    const res = await fetch(`${serverUrl}/api/user/askToAssistant`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      credentials: "include",
+      body: JSON.stringify({ command: `${contextString}\nUser: ${value}` }),
+    });
+    data = await res.json();
+  } catch (err) {
+    console.error("Failed to get assistant response:", err);
     setLoading(false);
-  };
+    return;
+  }
+
+  if (!data) {
+    setLoading(false);
+    return;
+  }
+
+  setAiText(data.response);
+  inputRef.current?.focus();
+  inputRef.current?.scrollIntoView();
+
+  if (data.type === "correct_code") {
+    if (!value) {
+      speak("❌ Please paste your code first.");
+      setResponse("❌ Please paste your code first.");
+    } else {
+      try {
+        const res = await fetch(`${serverUrl}/api/user/correct-code`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({ code: value }),
+        });
+        const json = await res.json();
+        setResponse(json.corrected || "No correction provided.");
+      } catch (err) {
+        setResponse("Failed to correct code.");
+      }
+    }
+  } else {
+    await handleCommand(data);
+    setResponse(data.response);
+  }
+
+  speak(data.response);
+
+  // ✅ Save chat history
+  try {
+    await fetch(`${serverUrl}/api/user/add-history`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      credentials: "include",
+      body: JSON.stringify({
+        userInput: value,
+        assistantResponse: data.response,
+      }),
+    });
+  } catch (error) {
+    console.error("❌ Failed to save history:", error);
+  }
+
+  setLoading(false);
+};
+
 
   const handleCommand = async (data) => {
     const { type, userInput } = data;
@@ -186,60 +212,111 @@ function Home() {
   };
 
   useEffect(() => {
-    const SpeechRecognition = window.webkitSpeechRecognition || window.SpeechRecognition;
-    const recognition = new SpeechRecognition();
-    recognition.continuous = true;
-    recognition.lang = "en-US";
-    recognitionRef.current = recognition;
-    const isRecognizingRef = { current: false };
+  const SpeechRecognition = window.webkitSpeechRecognition || window.SpeechRecognition;
+  const recognition = new SpeechRecognition();
+  recognition.continuous = true;
+  recognition.lang = "en-US";
+  recognitionRef.current = recognition;
 
-    const safeRecognition = () => {
-      if (!isSpeakingRef.current && !isRecognizingRef.current) {
-        try { recognition.start(); } catch (err) { if (err.name !== "InvalidStateError") console.error(err); }
+  const isRecognizingRef = { current: false };
+
+  const safeRecognition = () => {
+    if (!isSpeakingRef.current && !isRecognizingRef.current) {
+      try {
+        recognition.start();
+      } catch (err) {
+        if (err.name !== "InvalidStateError") console.error("Recognition start error:", err);
       }
-    };
+    }
+  };
 
-    recognition.onstart = () => { isRecognizingRef.current = true; setListening(true); };
-    recognition.onend = () => { isRecognizingRef.current = false; setListening(false); };
-    recognition.onerror = (event) => {
-      isRecognizingRef.current = false;
-      setListening(false);
-      if (event.error !== "aborted" && !isSpeakingRef.current) setTimeout(() => safeRecognition(), 1000);
-    };
-    recognition.onresult = async (e) => {
-      const transcript = e.results[e.results.length - 1][0].transcript.trim();
-      if (transcript.toLowerCase().includes(userData.assistantName.toLowerCase())) {
-        try {
-          setUserText(transcript);
-          recognition.stop();
-          const history = await fetchHistory();
-          const last5 = history.slice(-5);
-          const contextString = last5.map((h) => `Q: ${h.question}\nA: ${h.answer}`).join("\n");
+  recognition.onstart = () => {
+    isRecognizingRef.current = true;
+    setListening(true);
+  };
 
-          const res = await fetch(`${serverUrl}/api/user/askToAssistant`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            credentials: "include",
-            body: JSON.stringify({ command: `${contextString}\nUser: ${transcript}` }),
-          });
-          const data = await res.json();
-          if (data) {
-            setAiText(data.response);
-            await handleCommand(data);
-            speak(data.response);
-            setResponse(data.response);
-            setShowOutput(true);
+  recognition.onend = () => {
+    isRecognizingRef.current = false;
+    setListening(false);
+  };
+
+  recognition.onerror = (event) => {
+    isRecognizingRef.current = false;
+    setListening(false);
+    if (event.error !== "aborted" && !isSpeakingRef.current) setTimeout(safeRecognition, 1000);
+  };
+
+  recognition.onresult = async (e) => {
+    const transcript = e.results[e.results.length - 1][0].transcript.trim();
+    if (transcript.toLowerCase().includes(userData.assistantName.toLowerCase())) {
+      try {
+        setUserText(transcript);
+        recognition.stop();
+        isRecognizingRef.current = false;
+
+        // Fetch last 5 history items
+        const history = await fetchHistory();
+        const last5 = history.slice(-5);
+
+        const contextString = last5
+          .filter(h => h.userInput && h.assistantResponse)
+          .map(h => `Q: ${h.userInput}\nA: ${h.assistantResponse}`)
+          .join("\n");
+
+        const res = await fetch(`${serverUrl}/api/user/askToAssistant`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({ command: `${contextString}\nUser: ${transcript}` }),
+        });
+
+        const data = await res.json();
+        if (data) {
+          setAiText(data.response);
+          setResponse(data.response);
+          setShowOutput(true);
+
+          // Execute any commands if needed
+          await handleCommand(data);
+
+          // Speak the response
+          speak(data.response);
+
+          // Save history
+          try {
+            await fetch(`${serverUrl}/api/user/add-history`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              credentials: "include",
+              body: JSON.stringify({
+                userInput: transcript,
+                assistantResponse: data.response,
+              }),
+            });
+          } catch (err) {
+            console.error("Failed to save voice history:", err);
           }
-        } catch (err) {
-          console.error("Voice command error:", err);
         }
+      } catch (err) {
+        console.error("Voice command error:", err);
       }
-    };
+    }
+  };
 
-    safeRecognition();
-    const fallback = setInterval(() => { if (!isSpeakingRef.current && !isRecognizingRef.current) safeRecognition(); }, 10000);
-    return () => { recognition.stop(); setListening(false); isRecognizingRef.current = false; clearInterval(fallback); };
-  }, []);
+  safeRecognition();
+
+  const fallback = setInterval(() => {
+    if (!isSpeakingRef.current && !isRecognizingRef.current) safeRecognition();
+  }, 10000);
+
+  return () => {
+    recognition.stop();
+    setListening(false);
+    isRecognizingRef.current = false;
+    clearInterval(fallback);
+  };
+}, [userData]);
+
 
   useEffect(() => {
     if (userData?.name && userData?.assistantName)
