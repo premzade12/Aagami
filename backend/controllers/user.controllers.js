@@ -41,17 +41,28 @@ export const updateAssistant = async (req, res) => {
   }
 };
 
-// ✅ Ask to Assistant (with history memory)
+// ✅ Ask to Assistant with memory
 export const askToAssistant = async (req, res) => {
   try {
     const { command } = req.body;
+    if (!command) return res.status(400).json({ response: "Command is required" });
+
     const user = await User.findById(req.userId);
     if (!user) return res.status(404).json({ response: "User not found." });
 
-    // Prepare history context
+    // Check history for direct answers (like "father's name", "my age", etc.)
+    const lowerCommand = command.toLowerCase();
+    for (let i = user.history.length - 1; i >= 0; i--) {
+      const h = user.history[i];
+      if (h.question.toLowerCase().includes(lowerCommand)) {
+        return res.status(200).json({ type: "memory", userInput: command, response: h.answer });
+      }
+    }
+
+    // Prepare last 5 Q&A as context for Gemini
     let historyContext = "";
     if (user.history.length > 0) {
-      const last5 = user.history.slice(-5); // last 5 Q&A
+      const last5 = user.history.slice(-5);
       historyContext = last5
         .map((h) => `Q: ${h.question}\nA: ${h.answer}`)
         .join("\n");
@@ -60,7 +71,6 @@ export const askToAssistant = async (req, res) => {
     const userName = user.name;
     const assistantName = user.assistantName;
 
-    // Send history + current command to Gemini
     const result = await geminiResponse(
       `${historyContext}\nUser: ${command}`,
       assistantName,
@@ -80,11 +90,11 @@ export const askToAssistant = async (req, res) => {
 
     const { type, userInput, response: assistantResponse } = gemResult;
 
-    // Save this Q&A to history
-    user.history.push({ question: command, answer: assistantResponse, timestamp: new Date() });
+    // Save Q&A to history
+    user.history.push({ question: command, answer: assistantResponse || "No answer", timestamp: new Date() });
     await user.save();
 
-    // Handle command types
+    // Handle specific command types
     switch (type) {
       case "get_date":
         return res.json({ type, userInput, response: `Current date is ${moment().format("YYYY-MM-DD")}` });
@@ -106,20 +116,8 @@ export const askToAssistant = async (req, res) => {
         return res.json({ type, userInput, response: assistantResponse || randomLyric });
       case "correct_code":
         return res.json({ type, userInput: "", response: "Okay, I will correct your code now." });
-      case "change_voice":
-      case "whatsapp_message":
-      case "youtube_close":
-      case "google_search":
-      case "youtube_search":
-      case "youtube_play":
-      case "general":
-      case "calculator_open":
-      case "instagram_open":
-      case "facebook_open":
-      case "weather-show":
-        return res.json({ type, userInput, response: assistantResponse || "Okay." });
       default:
-        return res.status(400).json({ response: "I didn't understand that command." });
+        return res.json({ type, userInput, response: assistantResponse || "Okay." });
     }
   } catch (error) {
     console.error("❌ AskToAssistant error:", error.message);
