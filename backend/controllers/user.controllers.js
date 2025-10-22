@@ -68,15 +68,34 @@ export const askToAssistant = async (req, res) => {
     }
 
     // Safe JSON parsing
+    // --- NEW: Robust JSON parsing ---
     let gemResult;
     try {
-      const jsonMatch = result.match(/{[\s\S]*}/);
-      if (!jsonMatch) throw new Error("Gemini did not return JSON");
-      gemResult = JSON.parse(jsonMatch[0]);
+    // 1. Clean the response. Find text between ```json and ``` or just { and }
+      const jsonMatch = result.match(/```json([\s\S]*?)```|({[\s\S]*})/);
+
+      if (!jsonMatch || !jsonMatch[0]) {
+        // --- THIS IS THE FIX ---
+        // If no JSON is found, Gemini probably just sent a general text response.
+        // We will *wrap* it in the JSON structure we expect.
+        console.warn("⚠️ Gemini did not return JSON, wrapping response.");
+        gemResult = {
+          type: "general",
+          userInput: command,   // Use the original command
+          response: result,     // Use the raw result as the answer
+        };
+        // --- END FIX ---
+        } else {
+        // We found JSON, so parse it.
+        // Use jsonMatch[1] (from ```json) or jsonMatch[2] (from {})
+        const jsonString = jsonMatch[1] || jsonMatch[2];
+        gemResult = JSON.parse(jsonString);
+      }
     } catch (err) {
-      console.error("❌ Gemini JSON parsing error:", err.message);
+      console.error("❌ Gemini JSON parsing error:", err.message, "Raw result:", result);
       return res.status(500).json({ response: "Internal server error parsing AI response." });
     }
+    // --- END: Robust JSON parsing ---
 
     const type = gemResult.type || "general";
     const userInput = gemResult.userInput || command;
