@@ -1,21 +1,20 @@
+// user.controllers.js
+
 import uploadOnCloudinary from "../config/cloudinary.js";
 import geminiResponse from "../gemini.js";
 import User from "../models/user.model.js";
 import moment from "moment";
-import { GoogleGenerativeAI } from "@google/generative-ai";
 import geminiCorrectCode from "../geminiCorrectCode.js";
-
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
 // ✅ Get Current Logged-In User
 export const getCurrentUser = async (req, res) => {
   try {
     const user = await User.findById(req.userId).select("-password");
-    if (!user) return res.status(400).json({ message: "User not found" });
+    if (!user) return res.status(404).json({ message: "User not found" });
     return res.status(200).json(user);
   } catch (error) {
     console.error("❌ Get current user error:", error);
-    return res.status(400).json({ message: "Get current user error" });
+    return res.status(500).json({ message: "Internal server error" });
   }
 };
 
@@ -36,74 +35,56 @@ export const updateAssistant = async (req, res) => {
     return res.status(200).json(user);
   } catch (error) {
     console.error("❌ Update Assistant error:", error);
-    return res.status(400).json({ message: "Update Assistant error", error: error.message });
+    return res.status(500).json({ message: "Internal server error" });
   }
 };
 
 // ✅ Ask to Assistant with memory
 export const askToAssistant = async (req, res) => {
   try {
-    console.log("✅ askToAssistant called");
-    console.log("➡️ Request body:", req.body);
-    console.log("➡️ User ID from token:", req.userId);
-
     const { command } = req.body;
-    if (!command) {
-      console.error("❌ Missing command in body");
-      return res.status(400).json({ response: "Command is required." });
-    }
+    if (!command) return res.status(400).json({ response: "Command is required." });
 
     const user = await User.findById(req.userId);
-    if (!user) {
-      console.error("❌ User not found");
-      return res.status(404).json({ response: "User not found." });
-    }
+    if (!user) return res.status(404).json({ response: "User not found." });
 
-    console.log("✅ User found:", user.email);
-
-    // Build last 5 history items
+    // Build history context
     let historyContext = "";
     if (user.history && user.history.length > 0) {
-      const last5 = user.history
-        .filter(h => h.question && h.answer) // only valid entries
-        .slice(-5);
+      const last5 = user.history.slice(-5);
       historyContext = last5.map(h => `Q: ${h.question}\nA: ${h.answer}`).join("\n");
     }
 
     const userName = user.name || "User";
     const assistantName = user.assistantName || "Assistant";
 
-    console.log("🧠 Sending to Gemini model...");
-    console.log("🧩 Prompt:", `${historyContext}\nUser: ${command}`);
-
-    const result = await geminiResponse(
-      `${historyContext}\nUser: ${command}`,
-      assistantName,
-      userName
-    );
-
-    console.log("✅ Gemini response received:", result);
-
-    const jsonMatch = result.match(/{[\s\S]*}/);
-    if (!jsonMatch) {
-      console.error("❌ Gemini response did not contain JSON");
-      return res.status(400).json({ response: "Cannot understand." });
+    // Call Gemini model safely
+    let result;
+    try {
+      result = await geminiResponse(`${historyContext}\nUser: ${command}`, assistantName, userName);
+    } catch (err) {
+      console.error("❌ Gemini API error:", err.message);
+      return res.status(500).json({ response: "Internal server error from AI." });
     }
 
+    // Safe JSON parsing
     let gemResult;
     try {
+      const jsonMatch = result.match(/{[\s\S]*}/);
+      if (!jsonMatch) throw new Error("Gemini did not return JSON");
       gemResult = JSON.parse(jsonMatch[0]);
     } catch (err) {
-      console.error("❌ JSON parse error:", err.message);
-      return res.status(400).json({ response: "Invalid Gemini response format." });
+      console.error("❌ Gemini JSON parsing error:", err.message);
+      return res.status(500).json({ response: "Internal server error parsing AI response." });
     }
 
-    const { type, userInput, response: assistantResponse } = gemResult;
+    const type = gemResult.type || "general";
+    const userInput = gemResult.userInput || command;
+    const assistantResponse = gemResult.response || "Sorry, I couldn't process that.";
 
-    // Save this Q&A to user's history
-    user.history.push({ question: command, answer: assistantResponse, timestamp: new Date() });
+    // Save this Q&A
+    user.history.push({ question: userInput, answer: assistantResponse, timestamp: new Date() });
     await user.save();
-    console.log("✅ History updated");
 
     // Handle command types
     switch (type) {
@@ -117,11 +98,11 @@ export const askToAssistant = async (req, res) => {
         return res.json({ type, response: `Current month is ${moment().format("MMMM")}` });
       case "general":
       default:
-        return res.json({ type, response: assistantResponse || "Okay." });
+        return res.json({ type, response: assistantResponse });
     }
   } catch (error) {
     console.error("❌ askToAssistant error:", error);
-    res.status(500).json({ response: "Internal server error.", error: error.message });
+    res.status(500).json({ response: "Internal server error." });
   }
 };
 
@@ -139,23 +120,28 @@ export const correctCode = async (req, res) => {
   }
 };
 
-// ✅ Add new chat to user history
+// ✅ Add new chat to user history safely
 export const addHistory = async (req, res) => {
   try {
-    const { userInput, assistantResponse } = req.body; // match frontend
+    const { userInput, assistantResponse } = req.body;
 
-    if (!userInput || !assistantResponse)
+    if (!userInput || !assistantResponse) {
       return res.status(400).json({ message: "User input and assistant response required" });
+    }
 
     const user = await User.findById(req.userId);
     if (!user) return res.status(404).json({ message: "User not found" });
 
-    user.history.push({ question: userInput, answer: assistantResponse, timestamp: new Date() });
+    user.history.push({
+      question: String(userInput),
+      answer: String(assistantResponse),
+      timestamp: new Date(),
+    });
     await user.save();
 
     res.status(200).json({ message: "History added successfully" });
   } catch (error) {
-    console.error("❌ Add history error:", error.message);
+    console.error("❌ Add history error:", error);
     res.status(500).json({ message: "Internal Server Error" });
   }
 };
@@ -168,7 +154,7 @@ export const getHistory = async (req, res) => {
 
     res.status(200).json({ history: user.history });
   } catch (error) {
-    console.error("❌ Get history error:", error.message);
+    console.error("❌ Get history error:", error);
     res.status(500).json({ message: "Internal Server Error" });
   }
 };
