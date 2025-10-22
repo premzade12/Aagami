@@ -14,6 +14,7 @@ export const getCurrentUser = async (req, res) => {
     if (!user) return res.status(400).json({ message: "User not found" });
     return res.status(200).json(user);
   } catch (error) {
+    console.error("❌ Get current user error:", error);
     return res.status(400).json({ message: "Get current user error" });
   }
 };
@@ -35,9 +36,7 @@ export const updateAssistant = async (req, res) => {
     return res.status(200).json(user);
   } catch (error) {
     console.error("❌ Update Assistant error:", error);
-    return res
-      .status(400)
-      .json({ message: "Update Assistant error", error: error.message });
+    return res.status(400).json({ message: "Update Assistant error", error: error.message });
   }
 };
 
@@ -62,10 +61,12 @@ export const askToAssistant = async (req, res) => {
 
     console.log("✅ User found:", user.email);
 
-    // Build history context
+    // Build last 5 history items
     let historyContext = "";
     if (user.history && user.history.length > 0) {
-      const last5 = user.history.slice(-5);
+      const last5 = user.history
+        .filter(h => h.question && h.answer) // only valid entries
+        .slice(-5);
       historyContext = last5.map(h => `Q: ${h.question}\nA: ${h.answer}`).join("\n");
     }
 
@@ -75,7 +76,6 @@ export const askToAssistant = async (req, res) => {
     console.log("🧠 Sending to Gemini model...");
     console.log("🧩 Prompt:", `${historyContext}\nUser: ${command}`);
 
-    // --- call geminiResponse ---
     const result = await geminiResponse(
       `${historyContext}\nUser: ${command}`,
       assistantName,
@@ -100,10 +100,9 @@ export const askToAssistant = async (req, res) => {
 
     const { type, userInput, response: assistantResponse } = gemResult;
 
-    // Save this Q&A
+    // Save this Q&A to user's history
     user.history.push({ question: command, answer: assistantResponse, timestamp: new Date() });
     await user.save();
-
     console.log("✅ History updated");
 
     // Handle command types
@@ -126,7 +125,6 @@ export const askToAssistant = async (req, res) => {
   }
 };
 
-
 // ✅ Correct Code
 export const correctCode = async (req, res) => {
   try {
@@ -136,7 +134,7 @@ export const correctCode = async (req, res) => {
     const corrected = await geminiCorrectCode(code);
     return res.status(200).json({ corrected });
   } catch (error) {
-    console.error("Code correction error:", error);
+    console.error("❌ Code correction error:", error);
     return res.status(500).json({ corrected: "Error correcting code" });
   }
 };
@@ -144,13 +142,15 @@ export const correctCode = async (req, res) => {
 // ✅ Add new chat to user history
 export const addHistory = async (req, res) => {
   try {
-    const { question, answer } = req.body;
-    if (!question || !answer) return res.status(400).json({ message: "Question and answer required" });
+    const { userInput, assistantResponse } = req.body; // match frontend
+
+    if (!userInput || !assistantResponse)
+      return res.status(400).json({ message: "User input and assistant response required" });
 
     const user = await User.findById(req.userId);
     if (!user) return res.status(404).json({ message: "User not found" });
 
-    user.history.push({ question, answer, timestamp: new Date() });
+    user.history.push({ question: userInput, answer: assistantResponse, timestamp: new Date() });
     await user.save();
 
     res.status(200).json({ message: "History added successfully" });
