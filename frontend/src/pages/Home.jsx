@@ -87,8 +87,8 @@ function Home() {
   };
 
   const handleSubmit = async () => {
-  const value = inputValue.current.trim();
-  if (!value) return;
+  const value = inputValue.current?.trim();
+  if (!value) return; // Stop if user input is empty
 
   setUserText(value);
   setAiText("");
@@ -96,13 +96,13 @@ function Home() {
   setShowOutput(true);
   setLoading(true);
 
-  // ✅ Fetch last 5 Q&A for context
+  // ✅ Fetch last 5 valid Q&A for context
   const history = await fetchHistory();
-  const last5 = history.slice(-5);
+  const last5 = history
+    .filter(h => h.userInput && h.assistantResponse) // Ignore invalid entries
+    .slice(-5);
 
-  // Use the correct property names from your history
   const contextString = last5
-    .filter(h => h.userInput && h.assistantResponse) // ignore invalid entries
     .map(h => `Q: ${h.userInput}\nA: ${h.assistantResponse}`)
     .join("\n");
 
@@ -121,15 +121,18 @@ function Home() {
     return;
   }
 
-  if (!data) {
+  if (!data || !data.response) {
+    console.error("Assistant returned empty response");
     setLoading(false);
     return;
   }
 
   setAiText(data.response);
+  setResponse(data.response);
   inputRef.current?.focus();
   inputRef.current?.scrollIntoView();
 
+  // Handle code correction type
   if (data.type === "correct_code") {
     if (!value) {
       speak("❌ Please paste your code first.");
@@ -149,30 +152,31 @@ function Home() {
       }
     }
   } else {
-    await handleCommand(data);
+    await handleCommand(data); // execute other command types
     setResponse(data.response);
   }
 
   speak(data.response);
 
-  // ✅ Save chat history
-  try {
-    await fetch(`${serverUrl}/api/user/add-history`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      credentials: "include",
-      body: JSON.stringify({
-        userInput: value,
-        assistantResponse: data.response,
-      }),
-    });
-  } catch (error) {
-    console.error("❌ Failed to save history:", error);
+  // ✅ Save chat history only if both question and answer exist
+  if (value && data.response) {
+    try {
+      await fetch(`${serverUrl}/api/user/add-history`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          userInput: value,
+          assistantResponse: data.response,
+        }),
+      });
+    } catch (error) {
+      console.error("❌ Failed to save history:", error);
+    }
   }
 
   setLoading(false);
 };
-
 
   const handleCommand = async (data) => {
     const { type, userInput } = data;
