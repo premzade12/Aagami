@@ -5,6 +5,7 @@ dotenv.config();
 const geminiResponse = async (command, assistantName, userName) => {
   const prompt = `
 You are a smart AI assistant named ${assistantName}, created by Prem Zade.
+You need to remember the history of the user upto 100 prompts and provide the stored data if the user ask you to remember something.
 Your task is to understand the user's natural language commands and return a structured JSON object like this:
 
 {
