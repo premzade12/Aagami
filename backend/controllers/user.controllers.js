@@ -115,6 +115,14 @@ export const askToAssistant = async (req, res) => {
         return res.json({ type, response: `Today is ${moment().format("dddd")}` });
       case "get_month":
         return res.json({ type, response: `Current month is ${moment().format("MMMM")}` });
+      case "play_youtube":
+        const songQuery = gemResult.query || "music";
+        const youtubeUrl = `https://www.youtube.com/results?search_query=${encodeURIComponent(songQuery)}`;
+        return res.json({ type, response: assistantResponse, action: "open_url", url: youtubeUrl });
+      case "open_instagram":
+        return res.json({ type, response: assistantResponse, action: "open_url", url: "https://www.instagram.com" });
+      case "open_whatsapp":
+        return res.json({ type, response: assistantResponse, action: "open_url", url: "https://web.whatsapp.com" });
       case "general":
       default:
         return res.json({ type, response: assistantResponse });
@@ -177,3 +185,5 @@ export const getHistory = async (req, res) => {
     res.status(500).json({ message: "Internal Server Error" });
   }
 };
+
+
