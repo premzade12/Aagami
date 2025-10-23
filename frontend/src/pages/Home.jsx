@@ -199,24 +199,29 @@ function Home() {
 
   // ------------------- HANDLE COMMAND -------------------
   const handleCommand = async (data) => {
-    const { type, userInput } = data;
+    const { type, action, url, userInput } = data;
 
+    // Handle URL opening actions
+    if (action === "open_url" && url) {
+      window.open(url, "_blank");
+      return;
+    }
+
+    // Handle specific command types
     if (type === "google_search") {
       window.open(`https://www.google.com/search?q=${encodeURIComponent(userInput)}`, "_blank");
     }
 
-    if (type === "youtube_play") {
-      const cleaned = userInput.replace(/^(jarvis\s*)?play\s*/i, "").replace(/(from|on)\s*youtube/i, "").trim();
-      const url = `https://www.googleapis.com/youtube/v3/search?part=snippet&q=${encodeURIComponent(cleaned)}&key=${YOUTUBE_API_KEY}&maxResults=1&type=video`;
-      try {
-        const res = await fetch(url);
-        const data = await res.json();
-        const videoId = data.items?.[0]?.id?.videoId;
-        if (videoId) window.open(`https://www.youtube.com/watch?v=${videoId}&autoplay=1`, "YouTubeAssistantTab");
-        else speak("Sorry, no video found.");
-      } catch {
-        speak("Failed to fetch video.");
-      }
+    if (type === "play_youtube" && url) {
+      window.open(url, "_blank");
+    }
+
+    if (type === "open_instagram") {
+      window.open("https://www.instagram.com", "_blank");
+    }
+
+    if (type === "open_whatsapp") {
+      window.open("https://web.whatsapp.com", "_blank");
     }
 
     if (type === "change_voice") {
