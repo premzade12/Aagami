@@ -18,7 +18,9 @@ Your task is to understand the user's natural language commands and return a str
 
   "userInput": "<original user input, with assistant name removed if present>",
   "response": "<a short spoken response for the user>",
-  "query": "<for play_youtube: the song/video to search for>"
+  "query": "<for play_youtube: the song/video to search for>",
+  "contact": "<for whatsapp_message: the contact name>",
+  "message": "<for whatsapp_message: the message to send>"
 }
 
 Instructions:
@@ -28,7 +30,9 @@ Instructions:
   - "google_search": If the user wants to search something on Google.
   - "play_youtube": If user says "play X from YouTube" or "play song X" or "search X on YouTube".
   - "calculator_open": If user says "open calculator".
-  - "whatsapp_message": If user wants to send message via WhatsApp.
+  - "whatsapp_message": If user says "send hi to John" or "message John saying hello" or similar.
+    Include "contact" field with the person's name and "message" field with the message content.
+    Example: {"type": "whatsapp_message", "contact": "John", "message": "Hi", "response": "Sending message to John"}
   - "open_instagram": If user says "open Instagram" or "launch Instagram".
   - "open_whatsapp": If user says "open WhatsApp" or "launch WhatsApp".
   - "facebook_open", "weather-show" → as named.
