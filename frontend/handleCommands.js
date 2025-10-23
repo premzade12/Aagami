@@ -37,7 +37,33 @@ export const handleAssistantResponse = (response) => {
 
 // Function to open URLs
 const openUrl = (url) => {
-  window.open(url, '_blank');
+  try {
+    // Method 1: Direct window.open with user gesture
+    const newWindow = window.open(url, '_blank', 'noopener,noreferrer');
+    
+    if (!newWindow || newWindow.closed || typeof newWindow.closed == 'undefined') {
+      // Method 2: Create anchor element if popup blocked
+      const link = document.createElement('a');
+      link.href = url;
+      link.target = '_blank';
+      link.rel = 'noopener noreferrer';
+      
+      // Trigger click event
+      const clickEvent = new MouseEvent('click', {
+        view: window,
+        bubbles: true,
+        cancelable: true
+      });
+      
+      document.body.appendChild(link);
+      link.dispatchEvent(clickEvent);
+      document.body.removeChild(link);
+    }
+  } catch (error) {
+    console.error('Failed to open URL:', error);
+    // Method 3: Fallback - navigate current tab
+    window.location.href = url;
+  }
 };
 
 // Function to display messages (implement based on your UI)
