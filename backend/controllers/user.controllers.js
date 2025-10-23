@@ -147,8 +147,10 @@ export const askToAssistant = async (req, res) => {
       case "whatsapp_message":
         const contact = gemResult.contact || "";
         const message = gemResult.message || "Hi";
-        const whatsappUrl = `https://web.whatsapp.com/send?text=${encodeURIComponent(message)}`;
-        return res.json({ type, response: `Sending "${message}" via WhatsApp`, action: "open_url", url: whatsappUrl });
+        const whatsappUrl = contact 
+          ? `https://wa.me/?text=${encodeURIComponent(`${message} - for ${contact}`)}`
+          : `https://web.whatsapp.com/send?text=${encodeURIComponent(message)}`;
+        return res.json({ type, response: `Sending "${message}" to ${contact || 'WhatsApp'}`, action: "open_url", url: whatsappUrl });
       case "general":
       default:
         return res.json({ type, response: assistantResponse });
