@@ -51,11 +51,11 @@ export const askToAssistant = async (req, res) => {
     const user = await User.findById(req.userId);
     if (!user) return res.status(404).json({ response: "User not found." });
 
-    // Build history context
+    // Build history context with more memory
     let historyContext = "";
     if (user.history && user.history.length > 0) {
-      const last5 = user.history.slice(-5);
-      historyContext = last5.map(h => `Q: ${h.question}\nA: ${h.answer}`).join("\n");
+      const last10 = user.history.slice(-10);
+      historyContext = last10.map(h => `User: ${h.question}\nAssistant: ${h.answer}`).join("\n");
     }
 
     const userName = user.name || "User";
