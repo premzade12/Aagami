@@ -5,6 +5,9 @@ import geminiResponse from "../gemini.js";
 import User from "../models/user.model.js";
 import moment from "moment";
 import geminiCorrectCode from "../geminiCorrectCode.js";
+import axios from "axios";
+
+const YOUTUBE_API_KEY = process.env.YOUTUBE_API_KEY;
 
 // ✅ Get Current Logged-In User
 export const getCurrentUser = async (req, res) => {
@@ -116,9 +119,27 @@ export const askToAssistant = async (req, res) => {
       case "get_month":
         return res.json({ type, response: `Current month is ${moment().format("MMMM")}` });
       case "play_youtube":
-        const songQuery = gemResult.query || "music";
-        const youtubeUrl = `https://www.youtube.com/results?search_query=${encodeURIComponent(songQuery)}`;
-        return res.json({ type, response: assistantResponse, action: "open_url", url: youtubeUrl });
+        try {
+          const songQuery = gemResult.query || "popular songs 2024";
+          const searchUrl = `https://www.googleapis.com/youtube/v3/search?part=snippet&q=${encodeURIComponent(songQuery)}&key=${YOUTUBE_API_KEY}&maxResults=10&type=video&videoCategoryId=10`;
+          
+          const searchResponse = await axios.get(searchUrl);
+          const videos = searchResponse.data.items;
+          
+          if (videos && videos.length > 0) {
+            // Pick a random video from the results
+            const randomVideo = videos[Math.floor(Math.random() * videos.length)];
+            const videoUrl = `https://www.youtube.com/watch?v=${randomVideo.id.videoId}&autoplay=1`;
+            return res.json({ type, response: `Playing ${randomVideo.snippet.title}`, action: "open_url", url: videoUrl });
+          } else {
+            const fallbackUrl = `https://www.youtube.com/results?search_query=${encodeURIComponent(songQuery)}`;
+            return res.json({ type, response: assistantResponse, action: "open_url", url: fallbackUrl });
+          }
+        } catch (error) {
+          console.error("YouTube API error:", error);
+          const fallbackUrl = `https://www.youtube.com/results?search_query=${encodeURIComponent(gemResult.query || "music")}`;
+          return res.json({ type, response: assistantResponse, action: "open_url", url: fallbackUrl });
+        }
       case "open_instagram":
         return res.json({ type, response: assistantResponse, action: "open_url", url: "https://www.instagram.com" });
       case "open_whatsapp":
