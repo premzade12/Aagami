@@ -127,10 +127,10 @@ export const askToAssistant = async (req, res) => {
           const videos = searchResponse.data.items;
           
           if (videos && videos.length > 0) {
-            // Pick a random video from the results
-            const randomVideo = videos[Math.floor(Math.random() * videos.length)];
-            const videoUrl = `https://www.youtube.com/watch?v=${randomVideo.id.videoId}&autoplay=1`;
-            return res.json({ type, response: `Playing ${randomVideo.snippet.title}`, action: "open_url", url: videoUrl });
+            // Pick the first video from the results
+            const firstVideo = videos[0];
+            const videoUrl = `https://www.youtube.com/watch?v=${firstVideo.id.videoId}&autoplay=1`;
+            return res.json({ type, response: `Playing ${firstVideo.snippet.title}`, action: "open_url", url: videoUrl });
           } else {
             const fallbackUrl = `https://www.youtube.com/results?search_query=${encodeURIComponent(songQuery)}`;
             return res.json({ type, response: assistantResponse, action: "open_url", url: fallbackUrl });
