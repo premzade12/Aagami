@@ -286,10 +286,12 @@ function Home() {
       if (transcript.length > 0) {
         console.log('✅ Processing voice command...');
         try {
+          console.log('🔄 Starting voice command processing...');
           setUserText(transcript);
           recognition.stop();
           isRecognizingRef.current = false;
 
+          console.log('📚 Fetching history...');
           const history = await fetchHistory();
           const last5 = history
             .filter(h => h.userInput && h.assistantResponse)
@@ -299,14 +301,21 @@ function Home() {
             .map(h => `Q: ${h.userInput}\nA: ${h.assistantResponse}`)
             .join("\n");
 
+          const commandPayload = { command: `${contextString ? contextString + "\n" : ""}User: ${transcript}` };
+          console.log('📤 Sending API request:', commandPayload);
+          console.log('🌐 Server URL:', serverUrl);
+
           const res = await fetch(`${serverUrl}/api/user/askToAssistant`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             credentials: "include",
-            body: JSON.stringify({ command: `${contextString ? contextString + "\n" : ""}User: ${transcript}` }),
+            body: JSON.stringify(commandPayload),
           });
 
+          console.log('📥 API Response status:', res.status);
           const data = await res.json();
+          console.log('📥 API Response data:', data);
+          
           if (data && data.response) {
             setAiText(data.response);
             setResponse(data.response);
@@ -325,6 +334,8 @@ function Home() {
                 });
               } catch (err) { console.error("Failed to save voice history:", err); }
             }
+          } else {
+            console.error('❌ No valid response from API');
           }
         } catch (err) { 
           console.error("❌ Voice command error:", err);
