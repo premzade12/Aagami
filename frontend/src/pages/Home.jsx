@@ -414,8 +414,16 @@ function Home() {
             credentials: "include",
             body: JSON.stringify({ command: "Hello, testing connection" }),
           });
-          const data = await res.json();
-          console.log('✅ API test successful:', data);
+          console.log('📡 Response status:', res.status);
+          console.log('📡 Response headers:', res.headers);
+          
+          if (res.ok) {
+            const data = await res.json();
+            console.log('✅ API test successful:', data);
+          } else {
+            const errorText = await res.text();
+            console.error('❌ API test failed with status:', res.status, errorText);
+          }
         } catch (err) {
           console.error('❌ API test failed:', err);
         }
