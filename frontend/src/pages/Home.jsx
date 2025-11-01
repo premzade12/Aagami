@@ -246,7 +246,21 @@ function Home() {
 
   // ------------------- VOICE RECOGNITION -------------------
   useEffect(() => {
+    // Check if HTTPS is required for production
+    const isProduction = window.location.protocol === 'https:';
+    const isLocalhost = window.location.hostname === 'localhost';
+    
+    if (!isLocalhost && !isProduction) {
+      console.warn('⚠️ Voice recognition requires HTTPS in production');
+      return;
+    }
+
     const SpeechRecognition = window.webkitSpeechRecognition || window.SpeechRecognition;
+    if (!SpeechRecognition) {
+      console.error('❌ Speech recognition not supported in this browser');
+      return;
+    }
+    
     const recognition = new SpeechRecognition();
     recognition.continuous = true;
     recognition.lang = "en-US";
