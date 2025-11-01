@@ -338,70 +338,24 @@ function Home() {
     };
 
     recognition.onresult = async (e) => {
-      console.log('🎯 Raw speech result:', e.results);
       const transcript = e.results[e.results.length - 1][0].transcript.trim();
       console.log('🎤 Voice detected:', transcript);
-      console.log('📏 Transcript length:', transcript.length);
       
-      // Test with ANY speech input (no filtering)
-      console.log('✅ Processing ANY voice input...');
+      if (transcript.length > 0) {
         try {
-          console.log('🔄 Starting voice command processing...');
           setUserText(transcript);
           recognition.stop();
           isRecognizingRef.current = false;
 
-          console.log('📚 Fetching history...');
-          const history = await fetchHistory();
-          const last5 = history
-            .filter(h => h.userInput && h.assistantResponse)
-            .slice(-5);
-
-          const contextString = last5
-            .map(h => `Q: ${h.userInput}\nA: ${h.assistantResponse}`)
-            .join("\n");
-
-          const commandPayload = { command: `${contextString ? contextString + "\n" : ""}User: ${transcript}` };
-          console.log('📤 Sending API request:', commandPayload);
-          console.log('🌐 Server URL:', serverUrl);
-
-          const res = await fetch(`${serverUrl}/api/user/askToAssistant`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            credentials: "include",
-            body: JSON.stringify(commandPayload),
-          });
-
-          console.log('📥 API Response status:', res.status);
-          const data = await res.json();
-          console.log('📥 API Response data:', data);
-          
-          if (data && data.response) {
-            setAiText(data.response);
-            setResponse(data.response);
-            setShowOutput(true);
-            await handleCommand(data);
-            speak(data.response);
-
-            // Save history
-            if (transcript && data.response) {
-              try {
-                await fetch(`${serverUrl}/api/user/add-history`, {
-                  method: "POST",
-                  headers: { "Content-Type": "application/json" },
-                  credentials: "include",
-                  body: JSON.stringify({ userInput: transcript, assistantResponse: data.response }),
-                });
-              } catch (err) { console.error("Failed to save voice history:", err); }
-            }
-          } else {
-            console.error('❌ No valid response from API');
-          }
+          // Use the same logic as handleSubmit
+          inputValue.current = transcript;
+          await handleSubmit();
         } catch (err) { 
           console.error("❌ Voice command error:", err);
           speak("Sorry, I encountered an error processing your request.");
         }
       }
+    };
     };
 
       // Store recognition in ref for manual testing
