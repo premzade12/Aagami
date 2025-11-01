@@ -340,22 +340,34 @@ function Home() {
     recognition.onresult = async (e) => {
       console.log('🔊 Speech results received:', e.results.length);
       
-      // Get the last result
-      const lastResult = e.results[e.results.length - 1];
-      const transcript = lastResult[0].transcript.trim();
+      // Process all results to find the best transcript
+      let bestTranscript = '';
+      let isFinal = false;
       
-      console.log(`🎤 Transcript: "${transcript}" (isFinal: ${lastResult.isFinal})`);
+      for (let i = 0; i < e.results.length; i++) {
+        const result = e.results[i];
+        const transcript = result[0].transcript.trim();
+        console.log(`Result ${i}: "${transcript}" (final: ${result.isFinal}, confidence: ${result[0].confidence})`);
+        
+        if (result.isFinal && transcript.length > bestTranscript.length) {
+          bestTranscript = transcript;
+          isFinal = true;
+        } else if (!isFinal && transcript.length > bestTranscript.length) {
+          bestTranscript = transcript;
+        }
+      }
       
-      // Process both final and non-final results for testing
-      if (transcript.length > 2) { // At least 3 characters
-        console.log('✅ Processing voice command:', transcript);
+      console.log(`🎤 Best transcript: "${bestTranscript}" (final: ${isFinal})`);
+      
+      if (bestTranscript.length > 2) {
+        console.log('✅ Processing voice command:', bestTranscript);
         try {
-          setUserText(transcript);
+          setUserText(bestTranscript);
           recognition.stop();
           isRecognizingRef.current = false;
 
-          inputValue.current = transcript;
-          console.log('🚀 About to call handleSubmit');
+          inputValue.current = bestTranscript;
+          console.log('🚀 Calling handleSubmit with:', bestTranscript);
           await handleSubmit();
           console.log('✓ handleSubmit completed');
         } catch (err) { 
@@ -373,20 +385,6 @@ function Home() {
     
     recognition.onspeechend = () => {
       console.log('🔇 Speech ended - user stopped speaking');
-      // Force stop after speech ends to trigger result processing
-      setTimeout(() => {
-        if (isRecognizingRef.current) {
-          console.log('🔄 Forcing recognition stop after speech end');
-          recognition.stop();
-          
-          // If no result was captured, simulate a test command
-          setTimeout(async () => {
-            console.log('⚠️ No speech result captured, testing with manual command');
-            inputValue.current = "hello assistant";
-            await handleSubmit();
-          }, 500);
-        }
-      }, 1000);
     };
       // Store recognition in ref for manual testing
       recognitionRef.current = recognition;
