@@ -246,31 +246,29 @@ function Home() {
 
   // ------------------- VOICE RECOGNITION -------------------
   useEffect(() => {
-    console.log('🎤 Initializing voice recognition...');
-    console.log('📍 Location:', window.location.href);
-    console.log('🔒 Protocol:', window.location.protocol);
-    console.log('🏠 Hostname:', window.location.hostname);
-    
-    // Check if HTTPS is required for production
-    const isProduction = window.location.protocol === 'https:';
-    const isLocalhost = window.location.hostname === 'localhost';
-    
-    console.log('🌐 Is Production:', isProduction);
-    console.log('🏠 Is Localhost:', isLocalhost);
-    
-    if (!isLocalhost && !isProduction) {
-      console.warn('⚠️ Voice recognition requires HTTPS in production');
-      return;
-    }
+    const initVoiceRecognition = async () => {
+      console.log('🎤 Initializing voice recognition...');
+      
+      // Request microphone permission first
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        console.log('✅ Microphone permission granted');
+        stream.getTracks().forEach(track => track.stop()); // Stop the stream
+      } catch (err) {
+        console.error('❌ Microphone permission denied:', err);
+        alert('Please allow microphone access for voice commands to work.');
+        return;
+      }
 
-    const SpeechRecognition = window.webkitSpeechRecognition || window.SpeechRecognition;
-    if (!SpeechRecognition) {
-      console.error('❌ Speech recognition not supported in this browser');
-      return;
-    }
-    
-    console.log('✅ Speech recognition supported');
-    const recognition = new SpeechRecognition();
+      const SpeechRecognition = window.webkitSpeechRecognition || window.SpeechRecognition;
+      if (!SpeechRecognition) {
+        console.error('❌ Speech recognition not supported in this browser');
+        alert('Voice recognition is not supported in this browser. Please use Chrome or Edge.');
+        return;
+      }
+      
+      console.log('✅ Speech recognition supported');
+      const recognition = new SpeechRecognition();
     recognition.continuous = true;
     recognition.lang = "en-US";
     recognitionRef.current = recognition;
@@ -367,15 +365,18 @@ function Home() {
       }
     };
 
-    safeRecognition();
-    const fallback = setInterval(() => { if (!isSpeakingRef.current && !isRecognizingRef.current) safeRecognition(); }, 10000);
+      safeRecognition();
+      const fallback = setInterval(() => { if (!isSpeakingRef.current && !isRecognizingRef.current) safeRecognition(); }, 10000);
 
-    return () => {
-      recognition.stop();
-      setListening(false);
-      isRecognizingRef.current = false;
-      clearInterval(fallback);
+      return () => {
+        recognition.stop();
+        setListening(false);
+        isRecognizingRef.current = false;
+        clearInterval(fallback);
+      };
     };
+
+    initVoiceRecognition();
   }, [userData]);
 
   // ------------------- WELCOME SPEECH -------------------
