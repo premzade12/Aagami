@@ -373,6 +373,13 @@ function Home() {
     
     recognition.onspeechend = () => {
       console.log('🔇 Speech ended - user stopped speaking');
+      // Force stop after speech ends to trigger result processing
+      setTimeout(() => {
+        if (isRecognizingRef.current) {
+          console.log('🔄 Forcing recognition stop after speech end');
+          recognition.stop();
+        }
+      }, 1000);
     };
       // Store recognition in ref for manual testing
       recognitionRef.current = recognition;
