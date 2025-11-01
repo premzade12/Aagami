@@ -163,15 +163,7 @@ function Home() {
   return (
     <div className="w-full h-screen bg-black text-white flex items-center justify-center relative">
       {/* Manual Test Button */}
-      <button 
-        onClick={() => {
-          inputValue.current = "test voice command";
-          handleSubmit();
-        }}
-        className="absolute top-4 left-4 px-4 py-2 bg-blue-500 text-white rounded z-50"
-      >
-        Test API
-      </button>
+      
 
       {/* Top Buttons */}
       <div className="absolute top-4 right-4 flex gap-4 z-50">
