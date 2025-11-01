@@ -401,8 +401,26 @@ function Home() {
 
   // ------------------- WELCOME SPEECH -------------------
   useEffect(() => {
-    if (userData?.name && userData?.assistantName)
+    if (userData?.name && userData?.assistantName) {
       speak(`Hello ${userData.name}, what can I help you with?`);
+      
+      // Test API call
+      setTimeout(async () => {
+        try {
+          console.log('🧪 Testing askToAssistant API...');
+          const res = await fetch(`${serverUrl}/api/user/askToAssistant`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            credentials: "include",
+            body: JSON.stringify({ command: "Hello, testing connection" }),
+          });
+          const data = await res.json();
+          console.log('✅ API test successful:', data);
+        } catch (err) {
+          console.error('❌ API test failed:', err);
+        }
+      }, 2000);
+    }
   }, [userData]);
 
   // ------------------- JSX -------------------
