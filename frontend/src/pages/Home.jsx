@@ -107,22 +107,6 @@ function Home() {
     setShowOutput(true);
     setLoading(true);
 
-    // Fetch last 5 valid history items
-    let history = [];
-    try {
-      history = await fetchHistory();
-    } catch (err) {
-      console.error("Failed to fetch history:", err);
-    }
-
-    const last5 = history
-      .filter(h => h.userInput && h.assistantResponse)
-      .slice(-5);
-
-    const contextString = last5
-      .map(h => `Q: ${h.userInput}\nA: ${h.assistantResponse}`)
-      .join("\n");
-
     let data;
     try {
       const res = await fetch(`${serverUrl}/api/user/askToAssistant`, {
@@ -130,7 +114,7 @@ function Home() {
         headers: { "Content-Type": "application/json" },
         credentials: "include",
         body: JSON.stringify({
-          command: `${contextString ? contextString + "\n" : ""}User: ${value}`,
+          command: value,
         }),
       });
       data = await res.json();
