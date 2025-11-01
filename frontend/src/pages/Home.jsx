@@ -273,9 +273,10 @@ function Home() {
       console.log('✅ Speech recognition supported');
       const recognition = new SpeechRecognition();
     recognition.continuous = true;
-    recognition.interimResults = false;
+    recognition.interimResults = true;
     recognition.maxAlternatives = 1;
     recognition.lang = "en-US";
+    recognition.grammars = null;
     recognitionRef.current = recognition;
     const isRecognizingRef = { current: false };
     
@@ -339,26 +340,32 @@ function Home() {
 
     recognition.onresult = async (e) => {
       console.log('🔊 Speech detected! Results:', e.results);
-      const transcript = e.results[e.results.length - 1][0].transcript.trim();
-      console.log('🎤 Voice transcript:', transcript);
-      console.log('📏 Transcript length:', transcript.length);
       
-      if (transcript.length > 0) {
-        console.log('✅ Processing voice command:', transcript);
-        try {
-          setUserText(transcript);
-          recognition.stop();
-          isRecognizingRef.current = false;
+      for (let i = 0; i < e.results.length; i++) {
+        const result = e.results[i];
+        console.log(`Result ${i}: isFinal=${result.isFinal}, transcript="${result[0].transcript}"`);
+        
+        if (result.isFinal) {
+          const transcript = result[0].transcript.trim();
+          console.log('🎤 Final transcript:', transcript);
+          
+          if (transcript.length > 0) {
+            console.log('✅ Processing voice command:', transcript);
+            try {
+              setUserText(transcript);
+              recognition.stop();
+              isRecognizingRef.current = false;
 
-          inputValue.current = transcript;
-          console.log('🚀 Calling handleSubmit with:', transcript);
-          await handleSubmit();
-        } catch (err) { 
-          console.error("❌ Voice command error:", err);
-          speak("Sorry, I encountered an error processing your request.");
+              inputValue.current = transcript;
+              console.log('🚀 Calling handleSubmit with:', transcript);
+              await handleSubmit();
+              return;
+            } catch (err) { 
+              console.error("❌ Voice command error:", err);
+              speak("Sorry, I encountered an error processing your request.");
+            }
+          }
         }
-      } else {
-        console.log('⚠️ Empty transcript detected');
       }
     };
     
