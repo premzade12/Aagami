@@ -230,42 +230,36 @@ function Home() {
     }
   };
 
-  // ------------------- VOICE RECOGNITION -------------------
+  // ------------------- WELCOME SPEECH -------------------
   useEffect(() => {
-    const initVoiceRecognition = async () => {
-      console.log('🎤 Initializing voice recognition...');
+    if (userData?.name && userData?.assistantName) {
+      speak(`Hello ${userData.name}, what can I help you with?`);
       
-      // Request microphone permission first
-      try {
-        console.log('🎙️ Requesting microphone permission...');
-        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-        console.log('✅ Microphone permission granted');
-        stream.getTracks().forEach(track => track.stop()); // Stop the stream
-      } catch (err) {
-        console.error('❌ Microphone permission denied:', err);
-        alert('Please allow microphone access for voice commands to work.');
-        return;
-      }
-
-      const SpeechRecognition = window.webkitSpeechRecognition || window.SpeechRecognition;
-      if (!SpeechRecognition) {
-        console.error('❌ Speech recognition not supported in this browser');
-        alert('Voice recognition is not supported in this browser. Please use Chrome or Edge.');
-        return;
-      }
-      
-      console.log('✅ Speech recognition supported');
-      const recognition = new SpeechRecognition();
-    recognition.continuous = true;
-    recognition.interimResults = false;
-    recognition.maxAlternatives = 3;
-    recognition.lang = "en-US";
-    recognitionRef.current = recognition;
-    const isRecognizingRef = { current: false };
-    
-    console.log('⚙️ Recognition configured:', {
-      continuous: recognition.continuous,
-      interimResults: recognition.interimResults,
+      // Test API call
+      setTimeout(async () => {
+        try {
+          console.log('🧪 Testing askToAssistant API...');
+          const res = await fetch(`${serverUrl}/api/user/askToAssistant`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            credentials: "include",
+            body: JSON.stringify({ command: "Hello, testing connection" }),
+          });
+          console.log('📡 Response status:', res.status);
+          
+          if (res.ok) {
+            const data = await res.json();
+            console.log('✅ API test successful:', data);
+          } else {
+            const errorText = await res.text();
+            console.error('❌ API test failed with status:', res.status, errorText);
+          }
+        } catch (err) {
+          console.error('❌ API test failed:', err);
+        }
+      }, 2000);
+    }
+  }, [userData]);,
       lang: recognition.lang
     });
 
@@ -430,18 +424,13 @@ function Home() {
   // ------------------- JSX -------------------
   return (
     <div className="w-full h-screen bg-black text-white flex items-center justify-center relative">
-      {/* Voice Status */}
-      <div className="absolute top-4 left-4 px-4 py-2 bg-green-500 text-white rounded-full z-50">
-        🎤 Voice {listening ? 'Listening...' : 'Ready'}
-      </div>
-      
       {/* Manual Test Button */}
       <button 
         onClick={() => {
           inputValue.current = "test voice command";
           handleSubmit();
         }}
-        className="absolute top-16 left-4 px-4 py-2 bg-blue-500 text-white rounded z-50"
+        className="absolute top-4 left-4 px-4 py-2 bg-blue-500 text-white rounded z-50"
       >
         Test API
       </button>
