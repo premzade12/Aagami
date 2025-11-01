@@ -279,12 +279,12 @@ function Home() {
 
     recognition.onresult = async (e) => {
       const transcript = e.results[e.results.length - 1][0].transcript.trim();
-      console.log('Voice input:', transcript);
+      console.log('🎤 Voice detected:', transcript);
+      console.log('👤 Assistant name:', userData?.assistantName);
       
-      const assistantName = userData?.assistantName?.toLowerCase() || 'jarvis';
-      const transcriptLower = transcript.toLowerCase();
-      
-      if (transcriptLower.includes(assistantName) || transcriptLower.includes('jarvis') || transcriptLower.includes('hello')) {
+      // Respond to any voice input for testing
+      if (transcript.length > 0) {
+        console.log('✅ Processing voice command...');
         try {
           setUserText(transcript);
           recognition.stop();
@@ -326,7 +326,10 @@ function Home() {
               } catch (err) { console.error("Failed to save voice history:", err); }
             }
           }
-        } catch (err) { console.error("Voice command error:", err); }
+        } catch (err) { 
+          console.error("❌ Voice command error:", err);
+          speak("Sorry, I encountered an error processing your request.");
+        }
       }
     };
 
