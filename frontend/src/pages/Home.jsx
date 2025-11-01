@@ -339,33 +339,32 @@ function Home() {
     };
 
     recognition.onresult = async (e) => {
-      console.log('🔊 Speech detected! Results:', e.results);
+      console.log('🔊 Speech results received:', e.results.length);
       
-      for (let i = 0; i < e.results.length; i++) {
-        const result = e.results[i];
-        console.log(`Result ${i}: isFinal=${result.isFinal}, transcript="${result[0].transcript}"`);
-        
-        if (result.isFinal) {
-          const transcript = result[0].transcript.trim();
-          console.log('🎤 Final transcript:', transcript);
-          
-          if (transcript.length > 0) {
-            console.log('✅ Processing voice command:', transcript);
-            try {
-              setUserText(transcript);
-              recognition.stop();
-              isRecognizingRef.current = false;
+      // Get the last result
+      const lastResult = e.results[e.results.length - 1];
+      const transcript = lastResult[0].transcript.trim();
+      
+      console.log(`🎤 Transcript: "${transcript}" (isFinal: ${lastResult.isFinal})`);
+      
+      // Process both final and non-final results for testing
+      if (transcript.length > 2) { // At least 3 characters
+        console.log('✅ Processing voice command:', transcript);
+        try {
+          setUserText(transcript);
+          recognition.stop();
+          isRecognizingRef.current = false;
 
-              inputValue.current = transcript;
-              console.log('🚀 Calling handleSubmit with:', transcript);
-              await handleSubmit();
-              return;
-            } catch (err) { 
-              console.error("❌ Voice command error:", err);
-              speak("Sorry, I encountered an error processing your request.");
-            }
-          }
+          inputValue.current = transcript;
+          console.log('🚀 About to call handleSubmit');
+          await handleSubmit();
+          console.log('✓ handleSubmit completed');
+        } catch (err) { 
+          console.error("❌ Voice command error:", err);
+          speak("Sorry, I encountered an error processing your request.");
         }
+      } else {
+        console.log('⚠️ Transcript too short, ignoring');
       }
     };
     
