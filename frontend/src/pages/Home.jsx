@@ -251,6 +251,7 @@ function Home() {
       
       // Request microphone permission first
       try {
+        console.log('🎙️ Requesting microphone permission...');
         const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
         console.log('✅ Microphone permission granted');
         stream.getTracks().forEach(track => track.stop()); // Stop the stream
@@ -277,25 +278,39 @@ function Home() {
     const safeRecognition = () => {
       if (!isSpeakingRef.current && !isRecognizingRef.current) {
         try {
+          console.log('▶️ Starting voice recognition...');
           recognition.start();
         } catch (err) {
+          console.error('❌ Recognition start error:', err);
           if (err.name !== "InvalidStateError") console.error("Recognition start error:", err);
         }
+      } else {
+        console.log('⏸️ Skipping start - already active or speaking');
       }
     };
 
-    recognition.onstart = () => { isRecognizingRef.current = true; setListening(true); };
+    recognition.onstart = () => { 
+      console.log('🎤 Voice recognition started');
+      isRecognizingRef.current = true; 
+      setListening(true); 
+    };
     recognition.onend = () => { 
+      console.log('🛑 Voice recognition ended');
       isRecognizingRef.current = false; 
       setListening(false);
       if (!isSpeakingRef.current) {
+        console.log('🔄 Restarting voice recognition...');
         setTimeout(safeRecognition, 1000);
       }
     };
     recognition.onerror = (event) => {
+      console.error('❌ Voice recognition error:', event.error);
       isRecognizingRef.current = false;
       setListening(false);
-      if (event.error !== "aborted" && !isSpeakingRef.current) setTimeout(safeRecognition, 1000);
+      if (event.error !== "aborted" && !isSpeakingRef.current) {
+        console.log('🔄 Restarting after error...');
+        setTimeout(safeRecognition, 1000);
+      }
     };
 
     recognition.onresult = async (e) => {
