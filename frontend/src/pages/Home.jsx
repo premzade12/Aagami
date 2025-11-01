@@ -380,6 +380,9 @@ function Home() {
       }
     };
 
+      // Store recognition in ref for manual testing
+      recognitionRef.current = recognition;
+      
       safeRecognition();
       const fallback = setInterval(() => { if (!isSpeakingRef.current && !isRecognizingRef.current) safeRecognition(); }, 10000);
 
@@ -403,6 +406,24 @@ function Home() {
   // ------------------- JSX -------------------
   return (
     <div className="w-full h-screen bg-black text-white flex items-center justify-center relative">
+      {/* Test Voice Button */}
+      <button 
+        onClick={() => {
+          console.log('🔴 Manual voice test clicked');
+          if (recognitionRef.current) {
+            try {
+              recognitionRef.current.start();
+              console.log('🎤 Manual recognition started');
+            } catch (err) {
+              console.error('❌ Manual start error:', err);
+            }
+          }
+        }}
+        className="absolute top-4 left-4 px-4 py-2 bg-red-500 text-white rounded z-50"
+      >
+        Test Voice
+      </button>
+
       {/* Top Buttons */}
       <div className="absolute top-4 right-4 flex gap-4 z-50">
         {!menuOpen && <IoMenuOutline onClick={() => setMenuOpen(true)} className="lg:hidden text-white w-[30px] h-[30px] cursor-pointer" />}
