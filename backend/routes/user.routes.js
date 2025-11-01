@@ -15,7 +15,7 @@ const userRouter = express.Router();
 // ✅ Existing routes
 userRouter.get("/current", isAuth, getCurrentUser);
 userRouter.post("/update", isAuth, upload.single("assistantImage"), updateAssistant);
-userRouter.post("/asktoassistant", isAuth, askToAssistant);
+userRouter.post("/askToAssistant", isAuth, askToAssistant);
 userRouter.post("/correct-code", isAuth, correctCode);
 
 // ✅ New routes for history

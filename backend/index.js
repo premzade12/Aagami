@@ -16,12 +16,14 @@ dotenv.config();
 const app = express();
 
 // CORS config for frontend (Vite)
-app.use(express.json());
 app.use(cors({
   origin: process.env.NODE_ENV === "production" 
     ? "https://virtual-assistant-biz3.onrender.com" 
     : "http://localhost:5173",
-  credentials: true, // required for cookies
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'Cookie'],
+  optionsSuccessStatus: 200
 }));
 
 // Middlewares
