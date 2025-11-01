@@ -21,10 +21,53 @@ function Home() {
   const [copied, setCopied] = useState(false);
   const [showOutput, setShowOutput] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [isListening, setIsListening] = useState(false);
 
   const inputRef = useRef();
   const inputValue = useRef("");
   const synth = window.speechSynthesis;
+  const recognitionRef = useRef(null);
+
+  // ------------------- SPEECH RECOGNITION SETUP -------------------
+  useEffect(() => {
+    const SpeechRecognition =
+      window.SpeechRecognition || window.webkitSpeechRecognition;
+
+    if (!SpeechRecognition) {
+      console.error("Speech Recognition not supported in this browser.");
+      return;
+    }
+
+    const recognition = new SpeechRecognition();
+    recognition.lang = "en-US";
+    recognition.continuous = false;
+    recognition.interimResults = false;
+
+    recognition.onstart = () => {
+      console.log("🎤 Listening...");
+      setIsListening(true);
+    };
+
+    recognition.onresult = (event) => {
+      const transcript = event.results[0][0].transcript;
+      console.log("🗣️ Heard:", transcript);
+      setInput(transcript);
+      inputValue.current = transcript;
+      handleSubmit(); // Automatically send the command
+    };
+
+    recognition.onend = () => {
+      console.log("🛑 Stopped listening");
+      setIsListening(false);
+    };
+
+    recognition.onerror = (err) => {
+      console.error("Speech recognition error:", err);
+      setIsListening(false);
+    };
+
+    recognitionRef.current = recognition;
+  }, []);
 
   // ------------------- SPEAK FUNCTION -------------------
   const speak = async (text) => {
@@ -42,6 +85,12 @@ function Home() {
     const utterance = new SpeechSynthesisUtterance(text);
     if (selectedVoice) utterance.voice = selectedVoice;
     synth.speak(utterance);
+
+    // Optional: Automatically start listening again after speaking
+    utterance.onend = () => {
+      console.log("✅ Finished speaking");
+      // recognitionRef.current?.start(); // Uncomment for continuous conversation
+    };
   };
 
   // ------------------- LOGOUT -------------------
@@ -112,7 +161,10 @@ function Home() {
     }
 
     if (type === "google_search") {
-      window.open(`https://www.google.com/search?q=${encodeURIComponent(userInput)}`, "_blank");
+      window.open(
+        `https://www.google.com/search?q=${encodeURIComponent(userInput)}`,
+        "_blank"
+      );
     }
 
     if (type === "play_youtube" && url) {
@@ -132,57 +184,75 @@ function Home() {
   useEffect(() => {
     if (userData?.name && userData?.assistantName) {
       speak(`Hello ${userData.name}, what can I help you with?`);
-      
-      // Test API call
-      setTimeout(async () => {
-        try {
-          console.log('🧪 Testing askToAssistant API...');
-          const res = await fetch(`${serverUrl}/api/user/askToAssistant`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            credentials: "include",
-            body: JSON.stringify({ command: "Hello, testing connection" }),
-          });
-          console.log('📡 Response status:', res.status);
-          
-          if (res.ok) {
-            const data = await res.json();
-            console.log('✅ API test successful:', data);
-          } else {
-            const errorText = await res.text();
-            console.error('❌ API test failed with status:', res.status, errorText);
-          }
-        } catch (err) {
-          console.error('❌ API test failed:', err);
-        }
-      }, 2000);
+      // Optional: Auto-start listening
+      // recognitionRef.current?.start();
     }
   }, [userData]);
 
   // ------------------- JSX -------------------
   return (
     <div className="w-full h-screen bg-black text-white flex items-center justify-center relative">
-      {/* Manual Test Button */}
-      
-
       {/* Top Buttons */}
       <div className="absolute top-4 right-4 flex gap-4 z-50">
-        {!menuOpen && <IoMenuOutline onClick={() => setMenuOpen(true)} className="lg:hidden text-white w-[30px] h-[30px] cursor-pointer" />}
+        {!menuOpen && (
+          <IoMenuOutline
+            onClick={() => setMenuOpen(true)}
+            className="lg:hidden text-white w-[30px] h-[30px] cursor-pointer"
+          />
+        )}
         {menuOpen && (
           <div className="absolute lg:hidden top-0 left-0 w-full h-full bg-[#00000084] backdrop-blur-lg z-40 flex flex-col items-center justify-center gap-6">
-            <RxCross2 onClick={() => setMenuOpen(false)} className="text-white absolute top-[20px] right-[20px] w-[30px] h-[30px] cursor-pointer" />
-            <button onClick={() => { navigate("/customize"); setMenuOpen(false); }} className="absolute top-[60px] right-[20px] px-4 py-2 rounded-full border border-blue-500 hover:bg-blue-600 hover:text-black transition-all">Customize</button>
-            <button onClick={() => { handleLogOut(); setMenuOpen(false); }} className="absolute top-[120px] right-[20px] px-4 py-2 rounded-full border border-blue-500 hover:bg-blue-600 hover:text-black transition-all">Logout</button>
+            <RxCross2
+              onClick={() => setMenuOpen(false)}
+              className="text-white absolute top-[20px] right-[20px] w-[30px] h-[30px] cursor-pointer"
+            />
+            <button
+              onClick={() => {
+                navigate("/customize");
+                setMenuOpen(false);
+              }}
+              className="absolute top-[60px] right-[20px] px-4 py-2 rounded-full border border-blue-500 hover:bg-blue-600 hover:text-black transition-all"
+            >
+              Customize
+            </button>
+            <button
+              onClick={() => {
+                handleLogOut();
+                setMenuOpen(false);
+              }}
+              className="absolute top-[120px] right-[20px] px-4 py-2 rounded-full border border-blue-500 hover:bg-blue-600 hover:text-black transition-all"
+            >
+              Logout
+            </button>
           </div>
         )}
-        <button onClick={() => navigate("/customize")} className="hidden lg:block px-4 py-2 rounded-full border border-blue-500 hover:bg-blue-600 hover:text-black transition-all">Customize</button>
-        <button onClick={handleLogOut} className="hidden lg:block px-4 py-2 rounded-full border border-blue-500 hover:bg-blue-600 hover:text-black transition-all">Logout</button>
+        <button
+          onClick={() => navigate("/customize")}
+          className="hidden lg:block px-4 py-2 rounded-full border border-blue-500 hover:bg-blue-600 hover:text-black transition-all"
+        >
+          Customize
+        </button>
+        <button
+          onClick={handleLogOut}
+          className="hidden lg:block px-4 py-2 rounded-full border border-blue-500 hover:bg-blue-600 hover:text-black transition-all"
+        >
+          Logout
+        </button>
       </div>
 
       {/* Avatar */}
       <div className="absolute top-[80px] flex flex-col items-center">
-        <video src={userData?.assistantImage} className="w-[300px] h-[300px] object-cover rounded-full" autoPlay loop muted playsInline />
-        <h1 className="text-2xl font-semibold mt-4">I'm <span className="text-blue-400">{userData?.assistantName}</span></h1>
+        <video
+          src={userData?.assistantImage}
+          className="w-[300px] h-[300px] object-cover rounded-full"
+          autoPlay
+          loop
+          muted
+          playsInline
+        />
+        <h1 className="text-2xl font-semibold mt-4">
+          I'm <span className="text-blue-400">{userData?.assistantName}</span>
+        </h1>
         {!aiText && <img src={userImg} className="w-[300px]" />}
         {aiText && <img src={aiImg} className="w-[300px]" />}
       </div>
@@ -192,13 +262,40 @@ function Home() {
         <textarea
           ref={inputRef}
           value={input}
-          onChange={(e) => { setInput(e.target.value); inputValue.current = e.target.value; }}
+          onChange={(e) => {
+            setInput(e.target.value);
+            inputValue.current = e.target.value;
+          }}
           placeholder="Type your code or ask something..."
           rows={10}
           className="p-4 w-full bg-black border border-blue-500 rounded-md text-white resize-none focus:outline-none focus:ring-2 focus:ring-blue-400 shadow"
         />
-        <button onClick={handleSubmit} className="bg-blue-500 px-4 py-2 rounded text-white hover:bg-blue-600 transition">Submit</button>
-        {showOutput && <div className="w-full mt-2 text-green-300 font-mono text-sm whitespace-pre-wrap"><span className="text-blue-400">You:</span> {userText || input}</div>}
+        <div className="flex gap-2">
+          <button
+            onClick={handleSubmit}
+            className="bg-blue-500 px-4 py-2 rounded text-white hover:bg-blue-600 transition"
+          >
+            Submit
+          </button>
+
+          <button
+            onClick={() => {
+              if (isListening) recognitionRef.current?.stop();
+              else recognitionRef.current?.start();
+            }}
+            className={`px-4 py-2 rounded ${
+              isListening ? "bg-red-500" : "bg-green-500"
+            } text-white transition`}
+          >
+            {isListening ? "Stop" : "🎤 Speak"}
+          </button>
+        </div>
+
+        {showOutput && (
+          <div className="w-full mt-2 text-green-300 font-mono text-sm whitespace-pre-wrap">
+            <span className="text-blue-400">You:</span> {userText || input}
+          </div>
+        )}
       </div>
 
       {/* Right Column */}
@@ -206,7 +303,16 @@ function Home() {
         <div className="absolute right-[30px] w-[30%] md:w-[20%] bg-black border border-blue-500 p-4 rounded-lg text-green-400 whitespace-pre-wrap max-h-[50vh] overflow-auto shadow sm:flex hidden">
           {loading ? "Loading..." : response}
           {response && (
-            <button onClick={() => { navigator.clipboard.writeText(response); setCopied(true); setTimeout(() => setCopied(false), 1500); }} className="absolute top-2 right-2 bg-blue-500 text-white px-3 py-1 text-sm rounded hover:bg-blue-600 transition">{copied ? "Copied!" : "Copy"}</button>
+            <button
+              onClick={() => {
+                navigator.clipboard.writeText(response);
+                setCopied(true);
+                setTimeout(() => setCopied(false), 1500);
+              }}
+              className="absolute top-2 right-2 bg-blue-500 text-white px-3 py-1 text-sm rounded hover:bg-blue-600 transition"
+            >
+              {copied ? "Copied!" : "Copy"}
+            </button>
           )}
         </div>
       )}
