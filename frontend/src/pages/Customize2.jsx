@@ -41,11 +41,12 @@ function Customize2() {
           />
           {assistantName && <button className="cursor-pointer mt-4 px-8 py-3 rounded-full bg-black text-white font-semibold border border-blue-500 hover:bg-blue-600 hover:text-black 
           shadow-[0_0_20px_rgba(0,191,255,0.6)] transition-all duration-300" disabled={loading} onClick={async()=>{
-            await handleUpdateAssistant()
+            setLoading(true);
+            await handleUpdateAssistant();
+            setLoading(false);
             if(assistantName){
-            navigate("/");
-            }
-            else {
+                navigate("/");
+            } else {
                 navigate("/customize");
             }
             }}>{!loading?"Create Your Assistant":"Loading..."}</button>}
