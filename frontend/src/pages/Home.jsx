@@ -356,8 +356,6 @@ function Home() {
         }
       }
     };
-    };
-
       // Store recognition in ref for manual testing
       recognitionRef.current = recognition;
       
@@ -378,7 +376,6 @@ function Home() {
         isStartingRef.current = false;
         clearInterval(fallback);
       };
-
     };
 
     initVoiceRecognition();
