@@ -279,7 +279,12 @@ function Home() {
 
     recognition.onresult = async (e) => {
       const transcript = e.results[e.results.length - 1][0].transcript.trim();
-      if (transcript.toLowerCase().includes(userData.assistantName.toLowerCase())) {
+      console.log('Voice input:', transcript);
+      
+      const assistantName = userData?.assistantName?.toLowerCase() || 'jarvis';
+      const transcriptLower = transcript.toLowerCase();
+      
+      if (transcriptLower.includes(assistantName) || transcriptLower.includes('jarvis') || transcriptLower.includes('hello')) {
         try {
           setUserText(transcript);
           recognition.stop();
