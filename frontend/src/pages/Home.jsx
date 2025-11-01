@@ -26,6 +26,7 @@ function Home() {
 
   const recognitionRef = useRef(null);
   const isSpeakingRef = useRef(false);
+  const isStartingRef = useRef(false);
   const inputRef = useRef();
   const inputValue = useRef("");
   const synth = window.speechSynthesis;
@@ -277,12 +278,14 @@ function Home() {
     const isRecognizingRef = { current: false };
 
     const safeRecognition = () => {
-      if (!isSpeakingRef.current && !isRecognizingRef.current && voiceActivated) {
+      if (!isSpeakingRef.current && !isRecognizingRef.current && !isStartingRef.current && voiceActivated) {
         try {
           console.log('▶️ Starting voice recognition...');
+          isStartingRef.current = true;
           recognition.start();
         } catch (err) {
           console.error('❌ Recognition start error:', err);
+          isStartingRef.current = false;
           // Wait longer before retry on error
           if (err.name === "InvalidStateError") {
             setTimeout(safeRecognition, 3000);
@@ -295,12 +298,14 @@ function Home() {
 
     recognition.onstart = () => { 
       console.log('🎤 Voice recognition started');
-      isRecognizingRef.current = true; 
+      isRecognizingRef.current = true;
+      isStartingRef.current = false;
       setListening(true); 
     };
     recognition.onend = () => { 
       console.log('🛑 Voice recognition ended');
-      isRecognizingRef.current = false; 
+      isRecognizingRef.current = false;
+      isStartingRef.current = false;
       setListening(false);
       
       // Only restart if not speaking and voice is still activated
@@ -312,12 +317,13 @@ function Home() {
     recognition.onerror = (event) => {
       console.error('❌ Voice recognition error:', event.error);
       isRecognizingRef.current = false;
+      isStartingRef.current = false;
       setListening(false);
       
       // Only restart on specific errors, not on abort
       if (event.error === 'no-speech' || event.error === 'audio-capture') {
         console.log('🔄 Restarting after error...');
-        setTimeout(safeRecognition, 2000);
+        setTimeout(safeRecognition, 3000);
       } else if (event.error === 'aborted') {
         console.log('⏹️ Recognition aborted - not restarting');
       }
