@@ -246,9 +246,17 @@ function Home() {
 
   // ------------------- VOICE RECOGNITION -------------------
   useEffect(() => {
+    console.log('🎤 Initializing voice recognition...');
+    console.log('📍 Location:', window.location.href);
+    console.log('🔒 Protocol:', window.location.protocol);
+    console.log('🏠 Hostname:', window.location.hostname);
+    
     // Check if HTTPS is required for production
     const isProduction = window.location.protocol === 'https:';
     const isLocalhost = window.location.hostname === 'localhost';
+    
+    console.log('🌐 Is Production:', isProduction);
+    console.log('🏠 Is Localhost:', isLocalhost);
     
     if (!isLocalhost && !isProduction) {
       console.warn('⚠️ Voice recognition requires HTTPS in production');
@@ -261,6 +269,7 @@ function Home() {
       return;
     }
     
+    console.log('✅ Speech recognition supported');
     const recognition = new SpeechRecognition();
     recognition.continuous = true;
     recognition.lang = "en-US";
