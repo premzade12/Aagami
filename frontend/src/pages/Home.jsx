@@ -277,16 +277,19 @@ function Home() {
     const isRecognizingRef = { current: false };
 
     const safeRecognition = () => {
-      if (!isSpeakingRef.current && !isRecognizingRef.current) {
+      if (!isSpeakingRef.current && !isRecognizingRef.current && voiceActivated) {
         try {
           console.log('▶️ Starting voice recognition...');
           recognition.start();
         } catch (err) {
           console.error('❌ Recognition start error:', err);
-          if (err.name !== "InvalidStateError") console.error("Recognition start error:", err);
+          // Wait longer before retry on error
+          if (err.name === "InvalidStateError") {
+            setTimeout(safeRecognition, 3000);
+          }
         }
       } else {
-        console.log('⏸️ Skipping start - already active or speaking');
+        console.log('⏸️ Skipping start - conditions not met');
       }
     };
 
@@ -299,18 +302,24 @@ function Home() {
       console.log('🛑 Voice recognition ended');
       isRecognizingRef.current = false; 
       setListening(false);
-      if (!isSpeakingRef.current) {
+      
+      // Only restart if not speaking and voice is still activated
+      if (!isSpeakingRef.current && voiceActivated) {
         console.log('🔄 Restarting voice recognition...');
-        setTimeout(safeRecognition, 1000);
+        setTimeout(safeRecognition, 2000); // Longer delay to prevent abort errors
       }
     };
     recognition.onerror = (event) => {
       console.error('❌ Voice recognition error:', event.error);
       isRecognizingRef.current = false;
       setListening(false);
-      if (event.error !== "aborted" && !isSpeakingRef.current) {
+      
+      // Only restart on specific errors, not on abort
+      if (event.error === 'no-speech' || event.error === 'audio-capture') {
         console.log('🔄 Restarting after error...');
-        setTimeout(safeRecognition, 1000);
+        setTimeout(safeRecognition, 2000);
+      } else if (event.error === 'aborted') {
+        console.log('⏹️ Recognition aborted - not restarting');
       }
     };
 
