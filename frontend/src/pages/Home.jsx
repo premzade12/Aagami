@@ -338,23 +338,36 @@ function Home() {
     };
 
     recognition.onresult = async (e) => {
+      console.log('🔊 Speech detected! Results:', e.results);
       const transcript = e.results[e.results.length - 1][0].transcript.trim();
-      console.log('🎤 Voice detected:', transcript);
+      console.log('🎤 Voice transcript:', transcript);
+      console.log('📏 Transcript length:', transcript.length);
       
       if (transcript.length > 0) {
+        console.log('✅ Processing voice command:', transcript);
         try {
           setUserText(transcript);
           recognition.stop();
           isRecognizingRef.current = false;
 
-          // Use the same logic as handleSubmit
           inputValue.current = transcript;
+          console.log('🚀 Calling handleSubmit with:', transcript);
           await handleSubmit();
         } catch (err) { 
           console.error("❌ Voice command error:", err);
           speak("Sorry, I encountered an error processing your request.");
         }
+      } else {
+        console.log('⚠️ Empty transcript detected');
       }
+    };
+    
+    recognition.onspeechstart = () => {
+      console.log('🗣️ Speech started - user is speaking');
+    };
+    
+    recognition.onspeechend = () => {
+      console.log('🔇 Speech ended - user stopped speaking');
     };
       // Store recognition in ref for manual testing
       recognitionRef.current = recognition;
