@@ -273,9 +273,17 @@ function Home() {
       console.log('✅ Speech recognition supported');
       const recognition = new SpeechRecognition();
     recognition.continuous = true;
+    recognition.interimResults = false;
+    recognition.maxAlternatives = 1;
     recognition.lang = "en-US";
     recognitionRef.current = recognition;
     const isRecognizingRef = { current: false };
+    
+    console.log('⚙️ Recognition configured:', {
+      continuous: recognition.continuous,
+      interimResults: recognition.interimResults,
+      lang: recognition.lang
+    });
 
     const safeRecognition = () => {
       if (!isSpeakingRef.current && !isRecognizingRef.current && !isStartingRef.current && voiceActivated) {
@@ -330,13 +338,13 @@ function Home() {
     };
 
     recognition.onresult = async (e) => {
+      console.log('🎯 Raw speech result:', e.results);
       const transcript = e.results[e.results.length - 1][0].transcript.trim();
       console.log('🎤 Voice detected:', transcript);
-      console.log('👤 Assistant name:', userData?.assistantName);
+      console.log('📏 Transcript length:', transcript.length);
       
-      // Respond to any voice input for testing
-      if (transcript.length > 0) {
-        console.log('✅ Processing voice command...');
+      // Test with ANY speech input (no filtering)
+      console.log('✅ Processing ANY voice input...');
         try {
           console.log('🔄 Starting voice command processing...');
           setUserText(transcript);
