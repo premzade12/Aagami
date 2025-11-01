@@ -13,7 +13,6 @@ function Home() {
   const navigate = useNavigate();
   const { userData, serverUrl, setUserData } = useContext(userDataContext);
 
-  const [listening, setListening] = useState(false);
   const [userText, setUserText] = useState("");
   const [aiText, setAiText] = useState("");
   const [input, setInput] = useState("");
@@ -22,11 +21,7 @@ function Home() {
   const [copied, setCopied] = useState(false);
   const [showOutput, setShowOutput] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
-  const [voiceActivated, setVoiceActivated] = useState(true);
 
-  const recognitionRef = useRef(null);
-  const isSpeakingRef = useRef(false);
-  const isStartingRef = useRef(false);
   const inputRef = useRef();
   const inputValue = useRef("");
   const synth = window.speechSynthesis;
@@ -46,17 +41,6 @@ function Home() {
     );
     const utterance = new SpeechSynthesisUtterance(text);
     if (selectedVoice) utterance.voice = selectedVoice;
-
-    isSpeakingRef.current = true;
-    utterance.onend = () => {
-      setAiText("");
-      isSpeakingRef.current = false;
-      setTimeout(() => {
-        if (!isSpeakingRef.current) {
-          startRecognition();
-        }
-      }, 1000);
-    };
     synth.speak(utterance);
   };
 
@@ -69,30 +53,6 @@ function Home() {
     } catch (error) {
       setUserData(null);
       console.error(error);
-    }
-  };
-
-  const startRecognition = () => {
-    try {
-      recognitionRef.current?.start();
-      setListening(true);
-    } catch (error) {
-      if (!error.message.includes("start")) console.error("Recognition error:", error);
-    }
-  };
-
-  // ------------------- FETCH HISTORY -------------------
-  const fetchHistory = async () => {
-    try {
-      const res = await fetch(`${serverUrl}/api/user/get-history`, {
-        method: "GET",
-        credentials: "include",
-      });
-      const data = await res.json();
-      return data.history || [];
-    } catch (err) {
-      console.error("Failed to fetch history:", err);
-      return [];
     }
   };
 
@@ -137,53 +97,8 @@ function Home() {
     inputRef.current?.focus();
     inputRef.current?.scrollIntoView();
 
-    // Handle commands or code correction
-    if (data.type === "correct_code") {
-      if (!value) {
-        speak("❌ Please paste your code first.");
-        setResponse("❌ Please paste your code first.");
-      } else {
-        try {
-          const res = await fetch(`${serverUrl}/api/user/correct-code`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            credentials: "include",
-            body: JSON.stringify({ code: value }),
-          });
-          const json = await res.json();
-          setResponse(json.corrected || "No correction provided.");
-        } catch (err) {
-          setResponse("❌ Failed to correct code.");
-        }
-      }
-    } else {
-      await handleCommand(data);
-      setResponse(data.response);
-    }
-
+    await handleCommand(data);
     speak(data.response);
-
-    // Save chat history only if both fields exist
-    if (value && data.response) {
-      try {
-        const res = await fetch(`${serverUrl}/api/user/add-history`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          credentials: "include",
-          body: JSON.stringify({
-            userInput: value,
-            assistantResponse: data.response,
-          }),
-        });
-        if (!res.ok) {
-          const errorData = await res.json();
-          console.error("Failed to save history:", errorData);
-        }
-      } catch (err) {
-        console.error("❌ Error saving history:", err);
-      }
-    }
-
     setLoading(false);
   };
 
@@ -191,13 +106,11 @@ function Home() {
   const handleCommand = async (data) => {
     const { type, action, url, userInput } = data;
 
-    // Handle URL opening actions
     if (action === "open_url" && url) {
       window.open(url, "_blank");
       return;
     }
 
-    // Handle specific command types
     if (type === "google_search") {
       window.open(`https://www.google.com/search?q=${encodeURIComponent(userInput)}`, "_blank");
     }
@@ -213,21 +126,6 @@ function Home() {
     if (type === "open_whatsapp") {
       window.open("https://web.whatsapp.com", "_blank");
     }
-
-    if (type === "change_voice") {
-      const voiceName = userInput.split("to ").pop();
-      const voices = await new Promise((resolve) => {
-        const list = window.speechSynthesis.getVoices();
-        if (list.length) resolve(list);
-        window.speechSynthesis.onvoiceschanged = () =>
-          resolve(window.speechSynthesis.getVoices());
-      });
-      const selected = voices.find((v) => v.name.toLowerCase() === voiceName.toLowerCase());
-      if (selected) {
-        localStorage.setItem("assistantVoice", selected.name);
-        speak(`Voice changed to ${selected.name}`);
-      } else speak("Sorry, I couldn't find that voice.");
-    }
   };
 
   // ------------------- WELCOME SPEECH -------------------
@@ -246,166 +144,6 @@ function Home() {
             body: JSON.stringify({ command: "Hello, testing connection" }),
           });
           console.log('📡 Response status:', res.status);
-          
-          if (res.ok) {
-            const data = await res.json();
-            console.log('✅ API test successful:', data);
-          } else {
-            const errorText = await res.text();
-            console.error('❌ API test failed with status:', res.status, errorText);
-          }
-        } catch (err) {
-          console.error('❌ API test failed:', err);
-        }
-      }, 2000);
-    }
-  }, [userData]);,
-      lang: recognition.lang
-    });
-
-    const safeRecognition = () => {
-      if (!isSpeakingRef.current && !isRecognizingRef.current && !isStartingRef.current && voiceActivated) {
-        try {
-          console.log('▶️ Starting voice recognition...');
-          isStartingRef.current = true;
-          recognition.start();
-        } catch (err) {
-          console.error('❌ Recognition start error:', err);
-          isStartingRef.current = false;
-          // Wait longer before retry on error
-          if (err.name === "InvalidStateError") {
-            setTimeout(safeRecognition, 3000);
-          }
-        }
-      } else {
-        console.log('⏸️ Skipping start - conditions not met');
-      }
-    };
-
-    recognition.onstart = () => { 
-      console.log('🎤 Voice recognition started');
-      isRecognizingRef.current = true;
-      isStartingRef.current = false;
-      setListening(true); 
-    };
-    recognition.onend = () => { 
-      console.log('🛑 Voice recognition ended');
-      isRecognizingRef.current = false;
-      isStartingRef.current = false;
-      setListening(false);
-      
-      // Only restart if not speaking and voice is still activated
-      if (!isSpeakingRef.current && voiceActivated) {
-        console.log('🔄 Restarting voice recognition...');
-        setTimeout(safeRecognition, 2000); // Longer delay to prevent abort errors
-      }
-    };
-    recognition.onerror = (event) => {
-      console.error('❌ Voice recognition error:', event.error);
-      isRecognizingRef.current = false;
-      isStartingRef.current = false;
-      setListening(false);
-      
-      // Only restart on specific errors, not on abort
-      if (event.error === 'no-speech' || event.error === 'audio-capture') {
-        console.log('🔄 Restarting after error...');
-        setTimeout(safeRecognition, 3000);
-      } else if (event.error === 'aborted') {
-        console.log('⏹️ Recognition aborted - not restarting');
-      }
-    };
-
-    recognition.onresult = async (e) => {
-      console.log('🔊 Speech results received:', e.results.length);
-      
-      // Process all results to find the best transcript
-      let bestTranscript = '';
-      let isFinal = false;
-      
-      for (let i = 0; i < e.results.length; i++) {
-        const result = e.results[i];
-        const transcript = result[0].transcript.trim();
-        console.log(`Result ${i}: "${transcript}" (final: ${result.isFinal}, confidence: ${result[0].confidence})`);
-        
-        if (result.isFinal && transcript.length > bestTranscript.length) {
-          bestTranscript = transcript;
-          isFinal = true;
-        } else if (!isFinal && transcript.length > bestTranscript.length) {
-          bestTranscript = transcript;
-        }
-      }
-      
-      console.log(`🎤 Best transcript: "${bestTranscript}" (final: ${isFinal})`);
-      
-      if (bestTranscript.length > 2) {
-        console.log('✅ Processing voice command:', bestTranscript);
-        try {
-          setUserText(bestTranscript);
-          recognition.stop();
-          isRecognizingRef.current = false;
-
-          inputValue.current = bestTranscript;
-          console.log('🚀 Calling handleSubmit with:', bestTranscript);
-          await handleSubmit();
-          console.log('✓ handleSubmit completed');
-        } catch (err) { 
-          console.error("❌ Voice command error:", err);
-          speak("Sorry, I encountered an error processing your request.");
-        }
-      } else {
-        console.log('⚠️ Transcript too short, ignoring');
-      }
-    };
-    
-    recognition.onspeechstart = () => {
-      console.log('🗣️ Speech started - user is speaking');
-    };
-    
-    recognition.onspeechend = () => {
-      console.log('🔇 Speech ended - user stopped speaking');
-    };
-      // Store recognition in ref for manual testing
-      recognitionRef.current = recognition;
-      
-      // Auto-start voice recognition
-      console.log('▶️ Auto-starting voice recognition');
-      setTimeout(safeRecognition, 1000); // Small delay to ensure setup is complete
-      
-      const fallback = setInterval(() => { 
-        if (!isSpeakingRef.current && !isRecognizingRef.current && !isStartingRef.current) {
-          safeRecognition();
-        }
-      }, 10000);
-      
-      return () => {
-        recognition.stop();
-        setListening(false);
-        isRecognizingRef.current = false;
-        isStartingRef.current = false;
-        clearInterval(fallback);
-      };
-    };
-
-    initVoiceRecognition();
-  }, [userData, voiceActivated]);
-
-  // ------------------- WELCOME SPEECH -------------------
-  useEffect(() => {
-    if (userData?.name && userData?.assistantName) {
-      speak(`Hello ${userData.name}, what can I help you with?`);
-      
-      // Test API call
-      setTimeout(async () => {
-        try {
-          console.log('🧪 Testing askToAssistant API...');
-          const res = await fetch(`${serverUrl}/api/user/askToAssistant`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            credentials: "include",
-            body: JSON.stringify({ command: "Hello, testing connection" }),
-          });
-          console.log('📡 Response status:', res.status);
-          console.log('📡 Response headers:', res.headers);
           
           if (res.ok) {
             const data = await res.json();
