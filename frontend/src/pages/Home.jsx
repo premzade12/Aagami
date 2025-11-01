@@ -272,7 +272,7 @@ function Home() {
       
       console.log('✅ Speech recognition supported');
       const recognition = new SpeechRecognition();
-    recognition.continuous = true;
+    recognition.continuous = false;
     recognition.interimResults = true;
     recognition.maxAlternatives = 1;
     recognition.lang = "en-US";
@@ -445,6 +445,17 @@ function Home() {
       <div className="absolute top-4 left-4 px-4 py-2 bg-green-500 text-white rounded-full z-50">
         🎤 Voice {listening ? 'Listening...' : 'Ready'}
       </div>
+      
+      {/* Manual Test Button */}
+      <button 
+        onClick={() => {
+          inputValue.current = "test voice command";
+          handleSubmit();
+        }}
+        className="absolute top-16 left-4 px-4 py-2 bg-blue-500 text-white rounded z-50"
+      >
+        Test API
+      </button>
 
       {/* Top Buttons */}
       <div className="absolute top-4 right-4 flex gap-4 z-50">
