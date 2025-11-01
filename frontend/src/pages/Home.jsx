@@ -399,14 +399,22 @@ function Home() {
       // Store recognition in ref for manual testing
       recognitionRef.current = recognition;
       
-      // Don't auto-start until user activates
+      // Start recognition when voice is first activated
       if (voiceActivated) {
+        console.log('▶️ Voice activated - starting recognition');
         safeRecognition();
-        const fallback = setInterval(() => { if (!isSpeakingRef.current && !isRecognizingRef.current) safeRecognition(); }, 10000);
+        
+        const fallback = setInterval(() => { 
+          if (!isSpeakingRef.current && !isRecognizingRef.current && !isStartingRef.current) {
+            safeRecognition();
+          }
+        }, 10000);
+        
         return () => {
           recognition.stop();
           setListening(false);
           isRecognizingRef.current = false;
+          isStartingRef.current = false;
           clearInterval(fallback);
         };
       }
@@ -431,14 +439,7 @@ function Home() {
           onClick={() => {
             console.log('🎤 Activating voice recognition');
             setVoiceActivated(true);
-            if (recognitionRef.current) {
-              try {
-                recognitionRef.current.start();
-                console.log('✅ Voice recognition activated');
-              } catch (err) {
-                console.error('❌ Activation error:', err);
-              }
-            }
+            // Don't start here - let the useEffect handle it
           }}
           className="absolute top-4 left-4 px-6 py-3 bg-blue-500 hover:bg-blue-600 text-white rounded-full z-50 shadow-lg"
         >
