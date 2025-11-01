@@ -22,6 +22,7 @@ function Home() {
   const [copied, setCopied] = useState(false);
   const [showOutput, setShowOutput] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [voiceActivated, setVoiceActivated] = useState(false);
 
   const recognitionRef = useRef(null);
   const isSpeakingRef = useRef(false);
@@ -383,19 +384,22 @@ function Home() {
       // Store recognition in ref for manual testing
       recognitionRef.current = recognition;
       
-      safeRecognition();
-      const fallback = setInterval(() => { if (!isSpeakingRef.current && !isRecognizingRef.current) safeRecognition(); }, 10000);
+      // Don't auto-start until user activates
+      if (voiceActivated) {
+        safeRecognition();
+        const fallback = setInterval(() => { if (!isSpeakingRef.current && !isRecognizingRef.current) safeRecognition(); }, 10000);
+        return () => {
+          recognition.stop();
+          setListening(false);
+          isRecognizingRef.current = false;
+          clearInterval(fallback);
+        };
+      }
 
-      return () => {
-        recognition.stop();
-        setListening(false);
-        isRecognizingRef.current = false;
-        clearInterval(fallback);
-      };
     };
 
     initVoiceRecognition();
-  }, [userData]);
+  }, [userData, voiceActivated]);
 
   // ------------------- WELCOME SPEECH -------------------
   useEffect(() => {
@@ -406,23 +410,32 @@ function Home() {
   // ------------------- JSX -------------------
   return (
     <div className="w-full h-screen bg-black text-white flex items-center justify-center relative">
-      {/* Test Voice Button */}
-      <button 
-        onClick={() => {
-          console.log('🔴 Manual voice test clicked');
-          if (recognitionRef.current) {
-            try {
-              recognitionRef.current.start();
-              console.log('🎤 Manual recognition started');
-            } catch (err) {
-              console.error('❌ Manual start error:', err);
+      {/* Voice Activation Button */}
+      {!voiceActivated && (
+        <button 
+          onClick={() => {
+            console.log('🎤 Activating voice recognition');
+            setVoiceActivated(true);
+            if (recognitionRef.current) {
+              try {
+                recognitionRef.current.start();
+                console.log('✅ Voice recognition activated');
+              } catch (err) {
+                console.error('❌ Activation error:', err);
+              }
             }
-          }
-        }}
-        className="absolute top-4 left-4 px-4 py-2 bg-red-500 text-white rounded z-50"
-      >
-        Test Voice
-      </button>
+          }}
+          className="absolute top-4 left-4 px-6 py-3 bg-blue-500 hover:bg-blue-600 text-white rounded-full z-50 shadow-lg"
+        >
+          🎤 Activate Voice
+        </button>
+      )}
+      
+      {voiceActivated && (
+        <div className="absolute top-4 left-4 px-4 py-2 bg-green-500 text-white rounded-full z-50">
+          🎤 Voice Active {listening ? '(Listening...)' : ''}
+        </div>
+      )}
 
       {/* Top Buttons */}
       <div className="absolute top-4 right-4 flex gap-4 z-50">
