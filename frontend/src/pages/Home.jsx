@@ -22,7 +22,7 @@ function Home() {
   const [copied, setCopied] = useState(false);
   const [showOutput, setShowOutput] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
-  const [voiceActivated, setVoiceActivated] = useState(false);
+  const [voiceActivated, setVoiceActivated] = useState(true);
 
   const recognitionRef = useRef(null);
   const isSpeakingRef = useRef(false);
@@ -399,25 +399,23 @@ function Home() {
       // Store recognition in ref for manual testing
       recognitionRef.current = recognition;
       
-      // Start recognition when voice is first activated
-      if (voiceActivated) {
-        console.log('▶️ Voice activated - starting recognition');
-        safeRecognition();
-        
-        const fallback = setInterval(() => { 
-          if (!isSpeakingRef.current && !isRecognizingRef.current && !isStartingRef.current) {
-            safeRecognition();
-          }
-        }, 10000);
-        
-        return () => {
-          recognition.stop();
-          setListening(false);
-          isRecognizingRef.current = false;
-          isStartingRef.current = false;
-          clearInterval(fallback);
-        };
-      }
+      // Auto-start voice recognition
+      console.log('▶️ Auto-starting voice recognition');
+      setTimeout(safeRecognition, 1000); // Small delay to ensure setup is complete
+      
+      const fallback = setInterval(() => { 
+        if (!isSpeakingRef.current && !isRecognizingRef.current && !isStartingRef.current) {
+          safeRecognition();
+        }
+      }, 10000);
+      
+      return () => {
+        recognition.stop();
+        setListening(false);
+        isRecognizingRef.current = false;
+        isStartingRef.current = false;
+        clearInterval(fallback);
+      };
 
     };
 
@@ -433,25 +431,10 @@ function Home() {
   // ------------------- JSX -------------------
   return (
     <div className="w-full h-screen bg-black text-white flex items-center justify-center relative">
-      {/* Voice Activation Button */}
-      {!voiceActivated && (
-        <button 
-          onClick={() => {
-            console.log('🎤 Activating voice recognition');
-            setVoiceActivated(true);
-            // Don't start here - let the useEffect handle it
-          }}
-          className="absolute top-4 left-4 px-6 py-3 bg-blue-500 hover:bg-blue-600 text-white rounded-full z-50 shadow-lg"
-        >
-          🎤 Activate Voice
-        </button>
-      )}
-      
-      {voiceActivated && (
-        <div className="absolute top-4 left-4 px-4 py-2 bg-green-500 text-white rounded-full z-50">
-          🎤 Voice Active {listening ? '(Listening...)' : ''}
-        </div>
-      )}
+      {/* Voice Status */}
+      <div className="absolute top-4 left-4 px-4 py-2 bg-green-500 text-white rounded-full z-50">
+        🎤 Voice {listening ? 'Listening...' : 'Ready'}
+      </div>
 
       {/* Top Buttons */}
       <div className="absolute top-4 right-4 flex gap-4 z-50">
