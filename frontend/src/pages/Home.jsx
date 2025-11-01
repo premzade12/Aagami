@@ -22,6 +22,7 @@ function Home() {
   const [showOutput, setShowOutput] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [isListening, setIsListening] = useState(false);
+  const [mode, setMode] = useState("passive"); // 'passive' or 'active'
 
   const inputRef = useRef();
   const inputValue = useRef("");
@@ -40,7 +41,7 @@ function Home() {
 
     const recognition = new SpeechRecognition();
     recognition.lang = "en-US";
-    recognition.continuous = false;
+    recognition.continuous = true; // continuous listening
     recognition.interimResults = false;
 
     recognition.onstart = () => {
@@ -49,25 +50,49 @@ function Home() {
     };
 
     recognition.onresult = (event) => {
-      const transcript = event.results[0][0].transcript;
+      const transcript = event.results[event.results.length - 1][0].transcript
+        .toLowerCase()
+        .trim();
       console.log("🗣️ Heard:", transcript);
-      setInput(transcript);
-      inputValue.current = transcript;
-      handleSubmit(); // Automatically send the command
+
+      const wakeWord = userData?.assistantName
+        ? userData.assistantName.toLowerCase()
+        : "assistant";
+
+      if (mode === "passive") {
+        if (transcript.includes(wakeWord)) {
+          console.log("🟢 Wake word detected:", wakeWord);
+          speak(`Yes, ${userData?.name}?`);
+          setMode("active");
+        }
+      } else if (mode === "active") {
+        if (transcript.length > 2 && !transcript.includes(wakeWord)) {
+          setInput(transcript);
+          inputValue.current = transcript;
+          handleSubmit();
+          setMode("passive");
+        }
+      }
     };
 
     recognition.onend = () => {
-      console.log("🛑 Stopped listening");
+      console.log("🛑 Restarting listening...");
       setIsListening(false);
+      // Auto-restart listening for continuous mode
+      setTimeout(() => recognition.start(), 500);
     };
 
     recognition.onerror = (err) => {
       console.error("Speech recognition error:", err);
       setIsListening(false);
+      setTimeout(() => recognition.start(), 1000);
     };
 
     recognitionRef.current = recognition;
-  }, []);
+    recognition.start();
+
+    return () => recognition.stop();
+  }, [userData, mode]);
 
   // ------------------- SPEAK FUNCTION -------------------
   const speak = async (text) => {
@@ -86,10 +111,9 @@ function Home() {
     if (selectedVoice) utterance.voice = selectedVoice;
     synth.speak(utterance);
 
-    // Optional: Automatically start listening again after speaking
     utterance.onend = () => {
-      console.log("✅ Finished speaking");
-      // recognitionRef.current?.start(); // Uncomment for continuous conversation
+      console.log("✅ Finished speaking, resuming listening...");
+      setMode("passive");
     };
   };
 
@@ -143,15 +167,11 @@ function Home() {
 
     setAiText(data.response);
     setResponse(data.response);
-    inputRef.current?.focus();
-    inputRef.current?.scrollIntoView();
-
-    await handleCommand(data);
     speak(data.response);
     setLoading(false);
   };
 
-  // ------------------- HANDLE COMMAND -------------------
+  // ------------------- HANDLE COMMANDS -------------------
   const handleCommand = async (data) => {
     const { type, action, url, userInput } = data;
 
@@ -183,9 +203,7 @@ function Home() {
   // ------------------- WELCOME SPEECH -------------------
   useEffect(() => {
     if (userData?.name && userData?.assistantName) {
-      speak(`Hello ${userData.name}, what can I help you with?`);
-      // Optional: Auto-start listening
-      // recognitionRef.current?.start();
+      speak(`Hello ${userData.name}, I'm ${userData.assistantName}. I'm listening.`);
     }
   }, [userData]);
 
@@ -257,48 +275,7 @@ function Home() {
         {aiText && <img src={aiImg} className="w-[300px]" />}
       </div>
 
-      {/* Left Column */}
-      <div className="absolute left-[30px] w-[30%] flex-col items-start gap-4 sm:flex hidden md:w-[20%]">
-        <textarea
-          ref={inputRef}
-          value={input}
-          onChange={(e) => {
-            setInput(e.target.value);
-            inputValue.current = e.target.value;
-          }}
-          placeholder="Type your code or ask something..."
-          rows={10}
-          className="p-4 w-full bg-black border border-blue-500 rounded-md text-white resize-none focus:outline-none focus:ring-2 focus:ring-blue-400 shadow"
-        />
-        <div className="flex gap-2">
-          <button
-            onClick={handleSubmit}
-            className="bg-blue-500 px-4 py-2 rounded text-white hover:bg-blue-600 transition"
-          >
-            Submit
-          </button>
-
-          <button
-            onClick={() => {
-              if (isListening) recognitionRef.current?.stop();
-              else recognitionRef.current?.start();
-            }}
-            className={`px-4 py-2 rounded ${
-              isListening ? "bg-red-500" : "bg-green-500"
-            } text-white transition`}
-          >
-            {isListening ? "Stop" : "🎤 Speak"}
-          </button>
-        </div>
-
-        {showOutput && (
-          <div className="w-full mt-2 text-green-300 font-mono text-sm whitespace-pre-wrap">
-            <span className="text-blue-400">You:</span> {userText || input}
-          </div>
-        )}
-      </div>
-
-      {/* Right Column */}
+      {/* Right Column (Response Display) */}
       {showOutput && (
         <div className="absolute right-[30px] w-[30%] md:w-[20%] bg-black border border-blue-500 p-4 rounded-lg text-green-400 whitespace-pre-wrap max-h-[50vh] overflow-auto shadow sm:flex hidden">
           {loading ? "Loading..." : response}
