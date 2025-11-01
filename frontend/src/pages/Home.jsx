@@ -276,7 +276,6 @@ function Home() {
     recognition.interimResults = true;
     recognition.maxAlternatives = 1;
     recognition.lang = "en-US";
-    recognition.grammars = null;
     recognitionRef.current = recognition;
     const isRecognizingRef = { current: false };
     
