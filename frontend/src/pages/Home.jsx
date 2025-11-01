@@ -272,9 +272,9 @@ function Home() {
       
       console.log('✅ Speech recognition supported');
       const recognition = new SpeechRecognition();
-    recognition.continuous = false;
-    recognition.interimResults = true;
-    recognition.maxAlternatives = 1;
+    recognition.continuous = true;
+    recognition.interimResults = false;
+    recognition.maxAlternatives = 3;
     recognition.lang = "en-US";
     recognitionRef.current = recognition;
     const isRecognizingRef = { current: false };
