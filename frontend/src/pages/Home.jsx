@@ -49,7 +49,11 @@ function Home() {
     utterance.onend = () => {
       setAiText("");
       isSpeakingRef.current = false;
-      startRecognition();
+      setTimeout(() => {
+        if (!isSpeakingRef.current) {
+          startRecognition();
+        }
+      }, 1000);
     };
     synth.speak(utterance);
   };
@@ -260,7 +264,13 @@ function Home() {
     };
 
     recognition.onstart = () => { isRecognizingRef.current = true; setListening(true); };
-    recognition.onend = () => { isRecognizingRef.current = false; setListening(false); };
+    recognition.onend = () => { 
+      isRecognizingRef.current = false; 
+      setListening(false);
+      if (!isSpeakingRef.current) {
+        setTimeout(safeRecognition, 1000);
+      }
+    };
     recognition.onerror = (event) => {
       isRecognizingRef.current = false;
       setListening(false);
