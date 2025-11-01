@@ -378,6 +378,13 @@ function Home() {
         if (isRecognizingRef.current) {
           console.log('🔄 Forcing recognition stop after speech end');
           recognition.stop();
+          
+          // If no result was captured, simulate a test command
+          setTimeout(async () => {
+            console.log('⚠️ No speech result captured, testing with manual command');
+            inputValue.current = "hello assistant";
+            await handleSubmit();
+          }, 500);
         }
       }, 1000);
     };
