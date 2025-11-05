@@ -48,8 +48,42 @@ function Home() {
     // Cancel any existing speech
     synth.cancel();
     
-    // Always use browser TTS for now (external TTS is failing)
+    // For Hindi content, try Google TTS first, then fallback to browser
+    if (language === 'hi-IN' && /[\u0900-\u097F]/.test(text)) {
+      try {
+        await useGoogleTTS(text, language);
+        return;
+      } catch (e) {
+        console.log('Google TTS failed, using browser TTS');
+      }
+    }
+    
+    // Use browser TTS
     useBrowserTTS();
+    
+    async function useGoogleTTS(text, lang) {
+      const audio = new Audio();
+      const encodedText = encodeURIComponent(text);
+      audio.src = `https://translate.google.com/translate_tts?ie=UTF-8&tl=hi&client=tw-ob&q=${encodedText}`;
+      
+      return new Promise((resolve, reject) => {
+        audio.onended = () => {
+          setTimeout(() => {
+            setIsSpeaking(false);
+            if (!isProcessing) {
+              setIsWakeWordActive(true);
+            }
+            resolve();
+          }, 2000);
+        };
+        
+        audio.onerror = () => {
+          reject(new Error('Google TTS failed'));
+        };
+        
+        audio.play().catch(reject);
+      });
+    }
     
     function useBrowserTTS() {
       console.log(`🔊 Using browser TTS for ${language}:`, text.substring(0, 50) + '...');
