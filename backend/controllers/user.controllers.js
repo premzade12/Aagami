@@ -143,33 +143,31 @@ export const askToAssistant = async (req, res) => {
     const assistantResponse = gemResult.response || "I'm here to help you!";
     const query = gemResult.query;
     
-    // Enhanced language detection for Hindi-English mixed content
-    const detectLanguage = (inputText, responseText) => {
+    // Enhanced language detection - prioritize input language
+    const detectLanguage = (inputText) => {
       const devanagariPattern = /[\u0900-\u097F]/;
+      const inputLower = inputText.toLowerCase();
       
-      // Check response first for language detection
-      if (responseText && devanagariPattern.test(responseText)) {
-        console.log(`Language detection: Hindi detected in response (contains Devanagari)`);
+      // Check for Devanagari script in input (highest priority)
+      if (devanagariPattern.test(inputText)) {
+        console.log(`Language detection: Hindi detected (Devanagari): "${inputText}"`);
         return 'hi-IN';
       }
       
-      // Enhanced Hindi/Hinglish detection in input
-      const hindiWords = ['kya', 'hai', 'kaise', 'aap', 'main', 'hoon', 'kar', 'karo', 'namaste', 'namaskar', 'bilkul', 'theek', 'accha', 'acha', 'dekho', 'suno', 'batao', 'karo', 'kholo', 'band', 'chalo', 'aaj', 'kal', 'abhi', 'phir'];
-      const hasHindiWords = hindiWords.some(word => inputText.toLowerCase().includes(word));
+      // Enhanced Hindi/Hinglish detection
+      const hindiWords = ['kya', 'hai', 'kaise', 'aap', 'main', 'hoon', 'kar', 'karo', 'namaste', 'namaskar', 'bilkul', 'theek', 'accha', 'acha', 'dekho', 'suno', 'batao', 'kholo', 'band', 'chalo', 'aaj', 'kal', 'abhi', 'phir', 'mujhe', 'tumhe', 'woh', 'yeh', 'kuch', 'koi'];
+      const hasHindiWords = hindiWords.some(word => inputLower.includes(word));
       
-      // Check for Devanagari script in input
-      const hasDevanagari = devanagariPattern.test(inputText);
-      
-      if (hasDevanagari || hasHindiWords) {
-        console.log(`Language detection: Hindi/Hinglish detected in input: "${inputText}"`);
+      if (hasHindiWords) {
+        console.log(`Language detection: Hindi/Hinglish detected: "${inputText}"`);
         return 'hi-IN';
       }
       
-      console.log(`Language detection: English detected in input: "${inputText}"`);
+      console.log(`Language detection: English detected: "${inputText}"`);
       return 'en-US';
     };
     
-    const detectedLanguage = detectLanguage(command, assistantResponse);
+    const detectedLanguage = detectLanguage(command);
 
     // Save this Q&A
     user.history.push({ question: userInput, answer: assistantResponse, timestamp: new Date() });

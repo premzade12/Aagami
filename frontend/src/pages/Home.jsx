@@ -54,13 +54,15 @@ function Home() {
     function useBrowserTTS() {
       console.log(`🔊 Using browser TTS for ${language}:`, text.substring(0, 50) + '...');
     try {
-      // Add natural pauses for better speech
+      // Enhanced natural pauses for smoother speech
       const naturalText = text
-        .replace(/\./g, '. ') // Add pause after periods
-        .replace(/,/g, ', ') // Add pause after commas
-        .replace(/!/g, '! ') // Add pause after exclamations
-        .replace(/\?/g, '? ') // Add pause after questions
-        .replace(/\s+/g, ' ') // Clean up extra spaces
+        .replace(/\./g, '. ') 
+        .replace(/,/g, ', ') 
+        .replace(/!/g, '! ') 
+        .replace(/\?/g, '? ') 
+        .replace(/:/g, ': ')
+        .replace(/;/g, '; ')
+        .replace(/\s+/g, ' ') 
         .trim();
       
       // Detect emotional context for dynamic pitch
@@ -71,28 +73,26 @@ function Home() {
       const utterance = new SpeechSynthesisUtterance(naturalText);
       utterance.lang = language;
       
-      // Optimized voice parameters for all three languages
+      // Smooth and clear voice parameters
       if (language === 'hi-IN') {
-        // Hindi voice settings for clear mixed language
-        utterance.rate = 1.1; // Faster for Hindi-English mixing
-        utterance.pitch = 1.0; // Natural pitch for smooth Hindi
-        utterance.volume = 1.0; // Full volume for clarity
+        utterance.rate = 1.1;
+        utterance.pitch = 0.95;
+        utterance.volume = 1.0;
       } else if (language === 'mr-IN') {
-        // Marathi voice settings for clear pronunciation
-        utterance.rate = 1.1; // Consistent speed with Hindi
-        utterance.pitch = 1.0; // Natural pitch for smooth Marathi
-        utterance.volume = 1.0; // Full volume for clarity
+        utterance.rate = 1.1;
+        utterance.pitch = 0.95;
+        utterance.volume = 1.0;
       } else if (isExcited) {
-        utterance.rate = 1.2; // Faster when excited
-        utterance.pitch = 1.2; // Higher pitch for excitement
+        utterance.rate = 1.15;
+        utterance.pitch = 1.1;
         utterance.volume = 0.95;
       } else if (isQuestion) {
-        utterance.rate = 1.05; // Faster for questions
-        utterance.pitch = 1.15; // Rising intonation
+        utterance.rate = 1.1;
+        utterance.pitch = 1.05;
         utterance.volume = 0.9;
       } else {
-        utterance.rate = 1.1; // Faster natural speed for English
-        utterance.pitch = 1.1; // Clear pitch
+        utterance.rate = 1.1;
+        utterance.pitch = 1.0;
         utterance.volume = 0.9;
       }
       
@@ -102,63 +102,42 @@ function Home() {
       let selectedVoice = null;
       
       if (language === 'en-US') {
-        // Prioritize best female English voices
         selectedVoice = voices.find(voice => 
-          voice.name.toLowerCase().includes('zira') && voice.name.toLowerCase().includes('female')
-        ) || voices.find(voice => 
           voice.name.toLowerCase().includes('zira')
-        ) || voices.find(voice => 
-          voice.name.toLowerCase().includes('eva') && voice.name.toLowerCase().includes('female')
-        ) || voices.find(voice => 
-          voice.name.toLowerCase().includes('samantha')
-        ) || voices.find(voice => 
-          voice.name.toLowerCase().includes('google uk english female')
         ) || voices.find(voice => 
           voice.lang === 'en-US' && voice.name.toLowerCase().includes('female')
         ) || voices.find(voice => 
-          voice.lang === 'en-GB' && voice.name.toLowerCase().includes('female')
+          voice.name.toLowerCase().includes('female') && voice.lang.startsWith('en')
         ) || voices.find(voice => voice.lang === 'en-US');
       } else if (language === 'hi-IN') {
-        // Enhanced Hindi voice selection with female priority
         selectedVoice = voices.find(voice => 
-          voice.name.toLowerCase().includes('google हिन्दी') && voice.name.toLowerCase().includes('female')
+          voice.lang === 'hi-IN'
         ) || voices.find(voice => 
-          voice.name.toLowerCase().includes('google हिन्दी')
+          voice.lang === 'hi'
         ) || voices.find(voice => 
-          voice.name.toLowerCase().includes('microsoft heera')
+          voice.name.toLowerCase().includes('hindi')
+        ) || voices.find(voice => 
+          voice.name.toLowerCase().includes('heera')
         ) || voices.find(voice => 
           voice.name.toLowerCase().includes('kalpana')
         ) || voices.find(voice => 
-          voice.name.toLowerCase().includes('hemant')
-        ) || voices.find(voice => 
-          voice.lang === 'hi-IN' && voice.name.toLowerCase().includes('female')
-        ) || voices.find(voice => 
-          voice.lang === 'hi-IN' || voice.lang === 'hi'
+          voice.lang === 'en-IN'
         );
       } else if (language === 'mr-IN') {
-        // Enhanced Marathi voice selection with female priority
         selectedVoice = voices.find(voice => 
           voice.lang === 'mr-IN' && voice.name.toLowerCase().includes('female')
         ) || voices.find(voice => 
-          voice.lang === 'mr-IN' || voice.lang === 'mr'
+          voice.name.toLowerCase().includes('swara')
         ) || voices.find(voice => 
-          voice.name.toLowerCase().includes('marathi') && voice.name.toLowerCase().includes('female')
-        ) || voices.find(voice => 
-          voice.name.toLowerCase().includes('marathi')
-        ) || voices.find(voice => 
-          voice.name.toLowerCase().includes('google मराठी')
-        ) || voices.find(voice => 
-          voice.name.toLowerCase().includes('microsoft swara')
-        ) || voices.find(voice => 
-          // Fallback to Hindi female voices for Marathi
-          voice.name.toLowerCase().includes('google हिन्दी') && voice.name.toLowerCase().includes('female')
-        ) || voices.find(voice => 
-          voice.name.toLowerCase().includes('google हिन्दी')
+          voice.lang === 'mr-IN'
         ) || voices.find(voice => 
           voice.lang === 'hi-IN' && voice.name.toLowerCase().includes('female')
+        ) || voices.find(voice => 
+          voice.name.toLowerCase().includes('heera')
+        ) || voices.find(voice => 
+          voice.lang === 'hi-IN'
         );
       } else {
-        // Generic language detection with female priority
         const langCode = language.split('-')[0];
         selectedVoice = voices.find(voice => 
           voice.lang.startsWith(langCode) && voice.name.toLowerCase().includes('female')
@@ -169,29 +148,26 @@ function Home() {
         utterance.voice = selectedVoice;
         console.log(`✅ Using voice: ${selectedVoice.name} (${selectedVoice.lang})`);
       } else {
-        console.log(`⚠️ No voice found for ${language}, using default`);
+        console.log(`⚠️ No voice found for ${language}`);
+        console.log('Available voices:', voices.map(v => `${v.name} (${v.lang})`));
       }
       
-      // Resume listening after TTS finishes
       utterance.onend = () => {
-        console.log('TTS finished, waiting before resuming listening...');
         setTimeout(() => {
           setIsSpeaking(false);
           if (!isProcessing) {
-            console.log('Resuming listening after TTS');
             setIsWakeWordActive(true);
           }
-        }, 10000); // Even longer delay
+        }, 2000);
       };
       
       utterance.onerror = () => {
-        console.log('TTS error, resuming listening...');
         setTimeout(() => {
           setIsSpeaking(false);
           if (!isProcessing) {
             setIsWakeWordActive(true);
           }
-        }, 10000);
+        }, 2000);
       };
       
       synth.speak(utterance);
@@ -355,22 +331,34 @@ function Home() {
     }, 3000);
   }
 
-  // --- Simple Recognition ---
+  // --- Enhanced Multi-language Recognition ---
   function createNewRecognition() {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SpeechRecognition) return null;
 
     const rec = new SpeechRecognition();
-    rec.continuous = false;
-    rec.interimResults = false;
-    rec.lang = "en-US"; // English language support
+    rec.continuous = false;  // Single recognition session
+    rec.interimResults = false;  // Only final results
+    rec.maxAlternatives = 1;  // Single alternative
+    
+    // Use Hindi-India for better Hindi/Marathi recognition
+    rec.lang = "hi-IN"; // Hindi-India for mixed language support
 
     rec.onresult = (e) => {
       const transcript = e.results[0][0].transcript.toLowerCase().trim();
-      const confidence = e.results[0][0].confidence || 0;
+      const confidence = e.results[0][0].confidence || 0.8; // Default confidence
       const assistantName = userData?.assistantName?.toLowerCase();
+      
+      if (!transcript || transcript.length < 2) return; // Ignore very short inputs
+      
       setLastHeard(transcript);
-      console.log('Heard:', transcript, 'Confidence:', confidence, 'Assistant Awake:', isAssistantAwake, 'Ref Awake:', isAssistantAwakeRef.current);
+      console.log('🎤 Final:', transcript, 'Confidence:', confidence);
+      
+      // Lower confidence threshold for better recognition
+      if (confidence < 0.2) {
+        console.log('⚠️ Very low confidence, ignoring:', confidence);
+        return;
+      }
 
       // Process any speech when assistant is awake (check this FIRST)
       if (isAssistantAwakeRef.current && transcript) {
@@ -400,8 +388,10 @@ function Home() {
       
       // Only check wake commands when assistant is sleeping
       if (!isAssistantAwakeRef.current) {
-        // Check for wake up command
-        if (transcript.includes('wake up') || transcript.includes('wake')) {
+        // Check for wake up command in multiple languages
+        if (transcript.includes('wake up') || transcript.includes('wake') || 
+            transcript.includes('वेक अप') || transcript.includes('जाग') || 
+            transcript.includes('उठ') || transcript.includes('जागो')) {
           console.log('🔆 Assistant waking up!');
           setIsAssistantAwake(true);
           isAssistantAwakeRef.current = true;
@@ -445,55 +435,43 @@ function Home() {
     rec.onend = () => {
       setIsListening(false);
       recognitionRef.current = null;
-      // Only restart if conditions are met and not speaking
+      
       if (isWakeWordActive && !loading && !isProcessing && !isSpeaking) {
-        setTimeout(() => {
-          if (isWakeWordActive && !loading && !isListening && !isProcessing && !isSpeaking && !recognitionRef.current) {
-            startListening();
-          }
-        }, 2000); // Even longer delay to prevent loops
+        setTimeout(startListening, 2000);
       }
     };
 
     rec.onerror = (e) => {
-      if (e.error !== 'aborted') {
-        console.log('Recognition error:', e.error);
-      }
+      if (e.error === 'aborted' || e.error === 'no-speech') return;
+      
       setIsListening(false);
       recognitionRef.current = null;
-      // Don't auto-restart on errors
+      
+      if (e.error === 'not-allowed') {
+        setIsWakeWordActive(false);
+      }
     };
 
     return rec;
   }
+  
+
 
   // --- Start Listening ---
   function startListening() {
-    if (!isWakeWordActive || loading || isListening || isProcessing || isSpeaking) {
-      console.log('Cannot start listening - conditions not met:', {
-        isWakeWordActive, loading, isListening, isProcessing, isSpeaking
-      });
-      return;
-    }
-    
-    // Prevent multiple simultaneous starts
-    if (recognitionRef.current) {
-      console.log('Recognition already active, skipping start');
+    if (!isWakeWordActive || loading || isListening || isProcessing || isSpeaking || recognitionRef.current) {
       return;
     }
     
     const rec = createNewRecognition();
-    if (!rec) {
-      return;
-    }
+    if (!rec) return;
     
     recognitionRef.current = rec;
     try {
       rec.start();
       setIsListening(true);
-      console.log(isAssistantAwake ? '🎤 Started listening for commands' : '🎤 Started listening for wake word');
+      console.log('🎤 Started listening');
     } catch (e) {
-      console.log('Failed to start recognition:', e.message);
       setIsListening(false);
       recognitionRef.current = null;
     }
@@ -589,10 +567,11 @@ function Home() {
         </h1>
         <p className="text-sm text-blue-300 mt-2 animate-pulse">
           {(isAssistantAwake || isAssistantAwakeRef.current) ? 
-            `🎙️ ${userData?.assistantName} is listening...` : 
+            `🎙️ ${userData?.assistantName} is ${isListening ? 'listening' : 'ready'}...` : 
             `😴 ${userData?.assistantName} is sleeping. Say "wake up ${userData?.assistantName}" to wake me up.`
           }
         </p>
+        
 
         {!aiText && !loading && (
           <img src={userImg} className="w-[300px]" alt="User listening" />
