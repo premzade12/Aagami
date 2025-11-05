@@ -71,7 +71,14 @@ function Home() {
       const isCasual = /(sure|okay|alright|yep|yeah|cool|nice)/i.test(text);
       
       const utterance = new SpeechSynthesisUtterance(naturalText);
-      utterance.lang = language;
+      
+      // Force proper language setting based on content
+      if (language === 'hi-IN') {
+        // For Hindi content, use hi-IN to ensure proper pronunciation
+        utterance.lang = 'hi-IN';
+      } else {
+        utterance.lang = language;
+      }
       
       // Smooth and clear voice parameters
       if (language === 'hi-IN') {
@@ -111,15 +118,19 @@ function Home() {
         ) || voices.find(voice => voice.lang === 'en-US');
       } else if (language === 'hi-IN') {
         selectedVoice = voices.find(voice => 
-          voice.lang === 'en-IN' && voice.name.toLowerCase().includes('neerja')
+          voice.name.toLowerCase().includes('heera')
         ) || voices.find(voice => 
-          voice.lang === 'en-IN' && voice.name.toLowerCase().includes('female')
+          voice.name.toLowerCase().includes('kalpana')
         ) || voices.find(voice => 
-          voice.lang === 'en-IN'
+          voice.name.toLowerCase().includes('swara')
         ) || voices.find(voice => 
-          voice.lang === 'hi-IN'
+          voice.lang === 'hi-IN' && voice.name.toLowerCase().includes('female')
+        ) || voices.find(voice => 
+          voice.lang === 'hi-IN' && !voice.name.toLowerCase().includes('madhur')
         ) || voices.find(voice => 
           voice.lang === 'hi'
+        ) || voices.find(voice => 
+          voice.lang === 'en-IN'
         );
       } else if (language === 'mr-IN') {
         selectedVoice = voices.find(voice => 
