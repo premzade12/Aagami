@@ -152,17 +152,13 @@ function Home() {
         ) || voices.find(voice => voice.lang === 'en-US');
       } else if (language === 'hi-IN') {
         selectedVoice = voices.find(voice => 
-          voice.name.toLowerCase().includes('heera')
+          voice.name.includes('Google हिन्दी')
         ) || voices.find(voice => 
-          voice.name.toLowerCase().includes('kalpana')
-        ) || voices.find(voice => 
-          voice.name.toLowerCase().includes('swara')
-        ) || voices.find(voice => 
-          voice.lang === 'hi-IN' && voice.name.toLowerCase().includes('female')
-        ) || voices.find(voice => 
-          voice.lang === 'hi-IN' && !voice.name.toLowerCase().includes('madhur')
+          voice.lang === 'hi-IN'
         ) || voices.find(voice => 
           voice.lang === 'hi'
+        ) || voices.find(voice => 
+          voice.name.toLowerCase().includes('hindi')
         ) || voices.find(voice => 
           voice.lang === 'en-IN'
         );
