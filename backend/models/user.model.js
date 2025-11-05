@@ -36,6 +36,15 @@ const userSchema = new mongoose.Schema(
     assistantImage: {
       type: String,
     },
+    selectedVoice: {
+      type: String,
+      default: "21m00Tcm4TlvDq8ikWAM" // Default to Rachel
+    },
+    contacts: {
+      type: Map,
+      of: String,
+      default: new Map() // Store contact name -> phone number mapping
+    },
     history: [historySchema], // ⬅️ updated to store structured data
   },
   { timestamps: true }
