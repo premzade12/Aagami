@@ -1,3 +1,4 @@
+// FIXED CLEAN VERSION — stable continuous listening (no console spam or UI clutter)
 import React, { useContext, useEffect, useRef, useState } from "react";
 import { userDataContext } from "../context/UserContext";
 import { useNavigate } from "react-router-dom";
@@ -7,13 +8,10 @@ import axios from "axios";
 import { IoMenuOutline } from "react-icons/io5";
 import { RxCross2 } from "react-icons/rx";
 
-const YOUTUBE_API_KEY = import.meta.env.VITE_YOUTUBE_API_KEY;
-
 function Home() {
   const navigate = useNavigate();
   const { userData, serverUrl, setUserData } = useContext(userDataContext);
 
-  const [listening, setListening] = useState(false);
   const [userText, setUserText] = useState("");
   const [aiText, setAiText] = useState("");
   const [input, setInput] = useState("");
@@ -22,488 +20,630 @@ function Home() {
   const [copied, setCopied] = useState(false);
   const [showOutput, setShowOutput] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
-  const [voiceActivated, setVoiceActivated] = useState(true);
+  const [isListening, setIsListening] = useState(false);
+  const [isWakeWordActive, setIsWakeWordActive] = useState(true);
+  const [isAssistantAwake, setIsAssistantAwake] = useState(false);
+  const isAssistantAwakeRef = useRef(false);
+  const [lastHeard, setLastHeard] = useState("");
+  const [retryCount, setRetryCount] = useState(0);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [isSpeaking, setIsSpeaking] = useState(false);
 
-  const recognitionRef = useRef(null);
-  const isSpeakingRef = useRef(false);
-  const isStartingRef = useRef(false);
   const inputRef = useRef();
   const inputValue = useRef("");
   const synth = window.speechSynthesis;
+  const recognitionRef = useRef(null);
+  const retryTimeoutRef = useRef(null);
 
-  // ------------------- SPEAK FUNCTION -------------------
-  const speak = async (text) => {
+  // --- Simple Speak Function ---
+  async function speak(text, audioUrl = null, language = 'en-US') {
     if (!text) return;
+    
+    // COMPLETELY disable listening while speaking
+    setIsSpeaking(true);
+    setIsWakeWordActive(false);
+    stopListening();
+    setIsListening(false);
+    
+    // Cancel any existing speech
     synth.cancel();
-    const voices = await new Promise((resolve) => {
-      const list = window.speechSynthesis.getVoices();
-      if (list.length) resolve(list);
-      window.speechSynthesis.onvoiceschanged = () =>
-        resolve(window.speechSynthesis.getVoices());
-    });
-    const selectedVoice = voices.find(
-      (v) => v.name === localStorage.getItem("assistantVoice")
-    );
-    const utterance = new SpeechSynthesisUtterance(text);
-    if (selectedVoice) utterance.voice = selectedVoice;
-
-    isSpeakingRef.current = true;
-    utterance.onend = () => {
-      setAiText("");
-      isSpeakingRef.current = false;
+    
+    // Always use browser TTS for now (external TTS is failing)
+    useBrowserTTS();
+    
+    function useBrowserTTS() {
+      console.log(`🔊 Using browser TTS for ${language}:`, text.substring(0, 50) + '...');
+    try {
+      // Add natural pauses for better speech
+      const naturalText = text
+        .replace(/\./g, '. ') // Add pause after periods
+        .replace(/,/g, ', ') // Add pause after commas
+        .replace(/!/g, '! ') // Add pause after exclamations
+        .replace(/\?/g, '? ') // Add pause after questions
+        .replace(/\s+/g, ' ') // Clean up extra spaces
+        .trim();
+      
+      // Detect emotional context for dynamic pitch
+      const isExcited = /(!|awesome|great|perfect|amazing|wonderful|excited|love|happy)/i.test(text);
+      const isQuestion = /\?/.test(text);
+      const isCasual = /(sure|okay|alright|yep|yeah|cool|nice)/i.test(text);
+      
+      const utterance = new SpeechSynthesisUtterance(naturalText);
+      utterance.lang = language;
+      
+      // Optimized voice parameters for all three languages
+      if (language === 'hi-IN') {
+        // Hindi voice settings for clear mixed language
+        utterance.rate = 1.1; // Faster for Hindi-English mixing
+        utterance.pitch = 1.0; // Natural pitch for smooth Hindi
+        utterance.volume = 1.0; // Full volume for clarity
+      } else if (language === 'mr-IN') {
+        // Marathi voice settings for clear pronunciation
+        utterance.rate = 1.1; // Consistent speed with Hindi
+        utterance.pitch = 1.0; // Natural pitch for smooth Marathi
+        utterance.volume = 1.0; // Full volume for clarity
+      } else if (isExcited) {
+        utterance.rate = 1.2; // Faster when excited
+        utterance.pitch = 1.2; // Higher pitch for excitement
+        utterance.volume = 0.95;
+      } else if (isQuestion) {
+        utterance.rate = 1.05; // Faster for questions
+        utterance.pitch = 1.15; // Rising intonation
+        utterance.volume = 0.9;
+      } else {
+        utterance.rate = 1.1; // Faster natural speed for English
+        utterance.pitch = 1.1; // Clear pitch
+        utterance.volume = 0.9;
+      }
+      
+      // Force female voice selection with enhanced language support
+      const voices = synth.getVoices();
+      console.log(`🎤 Available voices:`, voices.map(v => `${v.name} (${v.lang})`));
+      let selectedVoice = null;
+      
+      if (language === 'en-US') {
+        // Prioritize best female English voices
+        selectedVoice = voices.find(voice => 
+          voice.name.toLowerCase().includes('zira') && voice.name.toLowerCase().includes('female')
+        ) || voices.find(voice => 
+          voice.name.toLowerCase().includes('zira')
+        ) || voices.find(voice => 
+          voice.name.toLowerCase().includes('eva') && voice.name.toLowerCase().includes('female')
+        ) || voices.find(voice => 
+          voice.name.toLowerCase().includes('samantha')
+        ) || voices.find(voice => 
+          voice.name.toLowerCase().includes('google uk english female')
+        ) || voices.find(voice => 
+          voice.lang === 'en-US' && voice.name.toLowerCase().includes('female')
+        ) || voices.find(voice => 
+          voice.lang === 'en-GB' && voice.name.toLowerCase().includes('female')
+        ) || voices.find(voice => voice.lang === 'en-US');
+      } else if (language === 'hi-IN') {
+        // Enhanced Hindi voice selection with female priority
+        selectedVoice = voices.find(voice => 
+          voice.name.toLowerCase().includes('google हिन्दी') && voice.name.toLowerCase().includes('female')
+        ) || voices.find(voice => 
+          voice.name.toLowerCase().includes('google हिन्दी')
+        ) || voices.find(voice => 
+          voice.name.toLowerCase().includes('microsoft heera')
+        ) || voices.find(voice => 
+          voice.name.toLowerCase().includes('kalpana')
+        ) || voices.find(voice => 
+          voice.name.toLowerCase().includes('hemant')
+        ) || voices.find(voice => 
+          voice.lang === 'hi-IN' && voice.name.toLowerCase().includes('female')
+        ) || voices.find(voice => 
+          voice.lang === 'hi-IN' || voice.lang === 'hi'
+        );
+      } else if (language === 'mr-IN') {
+        // Enhanced Marathi voice selection with female priority
+        selectedVoice = voices.find(voice => 
+          voice.lang === 'mr-IN' && voice.name.toLowerCase().includes('female')
+        ) || voices.find(voice => 
+          voice.lang === 'mr-IN' || voice.lang === 'mr'
+        ) || voices.find(voice => 
+          voice.name.toLowerCase().includes('marathi') && voice.name.toLowerCase().includes('female')
+        ) || voices.find(voice => 
+          voice.name.toLowerCase().includes('marathi')
+        ) || voices.find(voice => 
+          voice.name.toLowerCase().includes('google मराठी')
+        ) || voices.find(voice => 
+          voice.name.toLowerCase().includes('microsoft swara')
+        ) || voices.find(voice => 
+          // Fallback to Hindi female voices for Marathi
+          voice.name.toLowerCase().includes('google हिन्दी') && voice.name.toLowerCase().includes('female')
+        ) || voices.find(voice => 
+          voice.name.toLowerCase().includes('google हिन्दी')
+        ) || voices.find(voice => 
+          voice.lang === 'hi-IN' && voice.name.toLowerCase().includes('female')
+        );
+      } else {
+        // Generic language detection with female priority
+        const langCode = language.split('-')[0];
+        selectedVoice = voices.find(voice => 
+          voice.lang.startsWith(langCode) && voice.name.toLowerCase().includes('female')
+        ) || voices.find(voice => voice.lang.startsWith(langCode));
+      }
+      
+      if (selectedVoice) {
+        utterance.voice = selectedVoice;
+        console.log(`✅ Using voice: ${selectedVoice.name} (${selectedVoice.lang})`);
+      } else {
+        console.log(`⚠️ No voice found for ${language}, using default`);
+      }
+      
+      // Resume listening after TTS finishes
+      utterance.onend = () => {
+        console.log('TTS finished, waiting before resuming listening...');
+        setTimeout(() => {
+          setIsSpeaking(false);
+          if (!isProcessing) {
+            console.log('Resuming listening after TTS');
+            setIsWakeWordActive(true);
+          }
+        }, 10000); // Even longer delay
+      };
+      
+      utterance.onerror = () => {
+        console.log('TTS error, resuming listening...');
+        setTimeout(() => {
+          setIsSpeaking(false);
+          if (!isProcessing) {
+            setIsWakeWordActive(true);
+          }
+        }, 10000);
+      };
+      
+      synth.speak(utterance);
+    } catch (e) {
+      console.log('Browser TTS failed:', e);
+      // Resume listening even if TTS fails
       setTimeout(() => {
-        if (!isSpeakingRef.current) {
-          startRecognition();
+        setIsSpeaking(false);
+        if (!isProcessing) {
+          setIsWakeWordActive(true);
         }
-      }, 1000);
-    };
-    synth.speak(utterance);
-  };
+      }, 10000); // Even longer delay for failures
+    }
+    } // Close useBrowserTTS function
+  }
 
-  // ------------------- LOGOUT -------------------
-  const handleLogOut = async () => {
+  // --- Logout ---
+  async function handleLogOut() {
     try {
       await axios.get(`${serverUrl}/api/auth/logout`, { withCredentials: true });
       setUserData(null);
       navigate("/signin");
-    } catch (error) {
+    } catch {
       setUserData(null);
-      console.error(error);
+      navigate("/signin");
     }
-  };
+  }
 
-  const startRecognition = () => {
-    try {
-      recognitionRef.current?.start();
-      setListening(true);
-    } catch (error) {
-      if (!error.message.includes("start")) console.error("Recognition error:", error);
+  // --- Handle command actions ---
+  async function handleCommand(data) {
+    const { type, action, url, userInput, query } = data;
+    console.log('handleCommand called with:', data);
+    
+    if (action === "open_url" && url) return window.open(url, "_blank");
+    if (type === "google_search") {
+      const searchQuery = query || userInput || "search";
+      return window.open(
+        `https://www.google.com/search?q=${encodeURIComponent(searchQuery)}`,
+        "_blank"
+      );
     }
-  };
-
-  // ------------------- FETCH HISTORY -------------------
-  const fetchHistory = async () => {
-    try {
-      const res = await fetch(`${serverUrl}/api/user/get-history`, {
-        method: "GET",
-        credentials: "include",
-      });
-      const data = await res.json();
-      return data.history || [];
-    } catch (err) {
-      console.error("Failed to fetch history:", err);
-      return [];
+    if (type === "play_youtube" && url) {
+      console.log('🎵 Opening YouTube URL:', url);
+      return window.open(url, "_blank");
     }
-  };
+    if (type === "open_instagram")
+      return window.open("https://www.instagram.com", "_blank");
+    if (type === "open_whatsapp")
+      return window.open("https://web.whatsapp.com", "_blank");
+    if (type === "open_calculator" || type === "calculator_open" || action === "open_calculator") {
+      console.log('📊 Opening Calculator');
+      return window.open("https://www.google.com/search?q=calculator", "_blank");
+    }
+  }
 
-  // ------------------- HANDLE SUBMIT -------------------
-  const handleSubmit = async () => {
-    const value = inputValue.current?.trim();
-    if (!value) return;
+  // --- Handle Text or Voice Command ---
+  async function handleSubmit(command = null) {
+    let value = command || inputValue.current?.trim();
+    console.log('handleSubmit called with:', value, 'isAssistantAwake:', isAssistantAwake);
+    if (!value || isProcessing) return;
+    
+    setIsProcessing(true);
+
+    const assistantName = userData?.assistantName?.toLowerCase();
+    
+    // Check for sleep command FIRST (before any other processing)
+    if ((isAssistantAwake || isAssistantAwakeRef.current) && value.toLowerCase().includes('sleep') && assistantName && value.toLowerCase().includes(assistantName)) {
+      console.log('Sleep command detected in text input');
+      setIsAssistantAwake(false);
+      isAssistantAwakeRef.current = false;
+      setInput("");
+      inputValue.current = "";
+      speak(`Thank you! I'll go to sleep now. Please type "wake up" or say "wake up ${userData?.assistantName}" whenever you need me.`);
+      return;
+    }
+    
+    // Check for wake up command in text input (ONLY when sleeping)
+    if (!isAssistantAwake && !isAssistantAwakeRef.current && (value.toLowerCase().includes('wake up') || (assistantName && value.toLowerCase().includes(assistantName)))) {
+      console.log('Wake up command detected in text input');
+      setIsAssistantAwake(true);
+      isAssistantAwakeRef.current = true;
+      
+      // Extract command after removing assistant name
+      const command = assistantName ? value.replace(new RegExp(assistantName, 'gi'), '').trim() : value.trim();
+      
+      if (command && !command.toLowerCase().includes('wake up')) {
+        // Process the command after waking up
+        speak(`Thank you for waking me up! I'll process your command right away.`);
+        setInput("");
+        inputValue.current = "";
+        setIsProcessing(false);
+        setTimeout(() => {
+          handleSubmit(command);
+        }, 500);
+      } else {
+        speak(`Good day! I'm ${userData?.assistantName}, and I'm honored to assist you today.`);
+        setInput("");
+        inputValue.current = "";
+        setIsProcessing(false);
+      }
+      return;
+    }
+    
+    // Remove assistant name from command if present
+    if (assistantName && value.toLowerCase().includes(assistantName)) {
+      value = value.replace(new RegExp(assistantName, 'gi'), '').trim();
+      console.log('Command after removing assistant name:', value);
+    }
+    
+    // Only process commands if assistant is awake
+    if (!isAssistantAwake && !isAssistantAwakeRef.current) {
+      console.log('Assistant is sleeping, cannot process command');
+      speak(`I'm currently resting. Please type "wake up" or say "wake up ${userData?.assistantName}" whenever you need my assistance.`);
+      setInput("");
+      inputValue.current = "";
+      setIsProcessing(false);
+      return;
+    }
+    
+    console.log('Processing command - Assistant awake:', isAssistantAwake, 'Ref awake:', isAssistantAwakeRef.current);
 
     setUserText(value);
     setAiText("");
     setResponse("");
     setShowOutput(true);
     setLoading(true);
+    setInput("");
+    inputValue.current = "";
 
-    // Fetch last 5 valid history items
-    let history = [];
-    try {
-      history = await fetchHistory();
-    } catch (err) {
-      console.error("Failed to fetch history:", err);
-    }
-
-    const last5 = history
-      .filter(h => h.userInput && h.assistantResponse)
-      .slice(-5);
-
-    const contextString = last5
-      .map(h => `Q: ${h.userInput}\nA: ${h.assistantResponse}`)
-      .join("\n");
-
-    let data;
     try {
       const res = await fetch(`${serverUrl}/api/user/askToAssistant`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({
-          command: `${contextString ? contextString + "\n" : ""}User: ${value}`,
-        }),
+        body: JSON.stringify({ command: value }),
       });
-      data = await res.json();
-    } catch (err) {
-      console.error("Failed to get assistant response:", err);
-      setResponse("❌ Internal server error. Please try again.");
-      setLoading(false);
-      return;
-    }
+      const data = await res.json();
 
-    if (!data || !data.response) {
-      console.error("Assistant returned empty response:", data);
-      setResponse("❌ Assistant returned empty response.");
-      setLoading(false);
-      return;
-    }
-
-    setAiText(data.response);
-    setResponse(data.response);
-    inputRef.current?.focus();
-    inputRef.current?.scrollIntoView();
-
-    // Handle commands or code correction
-    if (data.type === "correct_code") {
-      if (!value) {
-        speak("❌ Please paste your code first.");
-        setResponse("❌ Please paste your code first.");
+      if (data && data.response) {
+        setAiText(data.response);
+        setResponse(data.response);
+        await handleCommand(data);
+        await speak(data.response, data.audioUrl, data.language);
       } else {
-        try {
-          const res = await fetch(`${serverUrl}/api/user/correct-code`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            credentials: "include",
-            body: JSON.stringify({ code: value }),
-          });
-          const json = await res.json();
-          setResponse(json.corrected || "No correction provided.");
-        } catch (err) {
-          setResponse("❌ Failed to correct code.");
-        }
+        setResponse("❌ Sorry, I didn't get a valid response.");
+        await speak("Sorry, I didn't get a valid response.", null, 'en-US');
       }
-    } else {
-      await handleCommand(data);
-      setResponse(data.response);
-    }
-
-    speak(data.response);
-
-    // Save chat history only if both fields exist
-    if (value && data.response) {
-      try {
-        const res = await fetch(`${serverUrl}/api/user/add-history`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          credentials: "include",
-          body: JSON.stringify({
-            userInput: value,
-            assistantResponse: data.response,
-          }),
-        });
-        if (!res.ok) {
-          const errorData = await res.json();
-          console.error("Failed to save history:", errorData);
-        }
-      } catch (err) {
-        console.error("❌ Error saving history:", err);
-      }
+    } catch {
+      setResponse("❌ Internal server error. Please try again.");
+      await speak("Internal server error. Please try again.", null, 'en-US');
     }
 
     setLoading(false);
-  };
+    setIsProcessing(false);
+    
+    // Resume listening after response (longer delay)
+    setTimeout(() => {
+      if (!isSpeaking) {
+        setIsWakeWordActive(true);
+      }
+    }, 3000);
+  }
 
-  // ------------------- HANDLE COMMAND -------------------
-  const handleCommand = async (data) => {
-    const { type, action, url, userInput } = data;
+  // --- Simple Recognition ---
+  function createNewRecognition() {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognition) return null;
 
-    // Handle URL opening actions
-    if (action === "open_url" && url) {
-      window.open(url, "_blank");
+    const rec = new SpeechRecognition();
+    rec.continuous = false;
+    rec.interimResults = false;
+    rec.lang = "en-US"; // English language support
+
+    rec.onresult = (e) => {
+      const transcript = e.results[0][0].transcript.toLowerCase().trim();
+      const confidence = e.results[0][0].confidence || 0;
+      const assistantName = userData?.assistantName?.toLowerCase();
+      setLastHeard(transcript);
+      console.log('Heard:', transcript, 'Confidence:', confidence, 'Assistant Awake:', isAssistantAwake, 'Ref Awake:', isAssistantAwakeRef.current);
+
+      // Process any speech when assistant is awake (check this FIRST)
+      if (isAssistantAwakeRef.current && transcript) {
+        // Check for sleep command first when awake
+        if (transcript.includes('sleep') && assistantName && transcript.includes(assistantName)) {
+          console.log('😴 Assistant going to sleep!');
+          setIsAssistantAwake(false);
+          isAssistantAwakeRef.current = false;
+          setIsWakeWordActive(false);
+          stopListening();
+          speak(`Thank you! I'll rest now. Please say "wake up ${userData?.assistantName}" whenever you need me.`);
+          setTimeout(() => {
+            setIsWakeWordActive(true);
+          }, 3000);
+          return;
+        }
+        
+        // When awake, process ALL commands normally (including assistant name)
+        if (!isProcessing) {
+          console.log('🎯 Command detected (awake):', transcript);
+          setIsWakeWordActive(false);
+          stopListening();
+          handleSubmit(transcript);
+        }
+        return;
+      }
+      
+      // Only check wake commands when assistant is sleeping
+      if (!isAssistantAwakeRef.current) {
+        // Check for wake up command
+        if (transcript.includes('wake up') || transcript.includes('wake')) {
+          console.log('🔆 Assistant waking up!');
+          setIsAssistantAwake(true);
+          isAssistantAwakeRef.current = true;
+          setIsWakeWordActive(false);
+          stopListening();
+          speak(`Good day! I'm ${userData?.assistantName}, and I'm at your service.`);
+          setTimeout(() => {
+            setIsWakeWordActive(true);
+          }, 1000);
+          return;
+        }
+        
+        // Only wake up with assistant name when sleeping (not when awake)
+        if (assistantName && transcript.includes(assistantName)) {
+          console.log('🔆 Assistant name detected, waking up!');
+          setIsAssistantAwake(true);
+          isAssistantAwakeRef.current = true;
+          setIsWakeWordActive(false);
+          stopListening();
+          const command = transcript.replace(new RegExp(assistantName, 'gi'), '').trim();
+          if (command && !isProcessing) {
+            speak(`Thank you for calling me! I'm ready to help.`);
+            setTimeout(() => {
+              handleSubmit(command);
+            }, 1000);
+          } else {
+            speak(`Good day! I'm ${userData?.assistantName}, at your service.`);
+            setTimeout(() => {
+              setIsWakeWordActive(true);
+            }, 2000);
+          }
+          return;
+        }
+        
+        // If assistant is sleeping and no wake command detected, ignore
+        console.log('😴 Assistant is sleeping, ignoring:', transcript);
+        return;
+      }
+    };
+
+    rec.onend = () => {
+      setIsListening(false);
+      recognitionRef.current = null;
+      // Only restart if conditions are met and not speaking
+      if (isWakeWordActive && !loading && !isProcessing && !isSpeaking) {
+        setTimeout(() => {
+          if (isWakeWordActive && !loading && !isListening && !isProcessing && !isSpeaking && !recognitionRef.current) {
+            startListening();
+          }
+        }, 2000); // Even longer delay to prevent loops
+      }
+    };
+
+    rec.onerror = (e) => {
+      if (e.error !== 'aborted') {
+        console.log('Recognition error:', e.error);
+      }
+      setIsListening(false);
+      recognitionRef.current = null;
+      // Don't auto-restart on errors
+    };
+
+    return rec;
+  }
+
+  // --- Start Listening ---
+  function startListening() {
+    if (!isWakeWordActive || loading || isListening || isProcessing || isSpeaking) {
+      console.log('Cannot start listening - conditions not met:', {
+        isWakeWordActive, loading, isListening, isProcessing, isSpeaking
+      });
       return;
     }
-
-    // Handle specific command types
-    if (type === "google_search") {
-      window.open(`https://www.google.com/search?q=${encodeURIComponent(userInput)}`, "_blank");
+    
+    // Prevent multiple simultaneous starts
+    if (recognitionRef.current) {
+      console.log('Recognition already active, skipping start');
+      return;
     }
-
-    if (type === "play_youtube" && url) {
-      window.open(url, "_blank");
+    
+    const rec = createNewRecognition();
+    if (!rec) {
+      return;
     }
-
-    if (type === "open_instagram") {
-      window.open("https://www.instagram.com", "_blank");
+    
+    recognitionRef.current = rec;
+    try {
+      rec.start();
+      setIsListening(true);
+      console.log(isAssistantAwake ? '🎤 Started listening for commands' : '🎤 Started listening for wake word');
+    } catch (e) {
+      console.log('Failed to start recognition:', e.message);
+      setIsListening(false);
+      recognitionRef.current = null;
     }
+  }
 
-    if (type === "open_whatsapp") {
-      window.open("https://web.whatsapp.com", "_blank");
-    }
-
-    if (type === "change_voice") {
-      const voiceName = userInput.split("to ").pop();
-      const voices = await new Promise((resolve) => {
-        const list = window.speechSynthesis.getVoices();
-        if (list.length) resolve(list);
-        window.speechSynthesis.onvoiceschanged = () =>
-          resolve(window.speechSynthesis.getVoices());
-      });
-      const selected = voices.find((v) => v.name.toLowerCase() === voiceName.toLowerCase());
-      if (selected) {
-        localStorage.setItem("assistantVoice", selected.name);
-        speak(`Voice changed to ${selected.name}`);
-      } else speak("Sorry, I couldn't find that voice.");
-    }
-  };
-
-  // ------------------- VOICE RECOGNITION -------------------
-  useEffect(() => {
-    const initVoiceRecognition = async () => {
-      console.log('🎤 Initializing voice recognition...');
-      
-      // Request microphone permission first
+  function stopListening() {
+    if (recognitionRef.current) {
       try {
-        console.log('🎙️ Requesting microphone permission...');
-        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-        console.log('✅ Microphone permission granted');
-        stream.getTracks().forEach(track => track.stop()); // Stop the stream
-      } catch (err) {
-        console.error('❌ Microphone permission denied:', err);
-        alert('Please allow microphone access for voice commands to work.');
-        return;
-      }
-
-      const SpeechRecognition = window.webkitSpeechRecognition || window.SpeechRecognition;
-      if (!SpeechRecognition) {
-        console.error('❌ Speech recognition not supported in this browser');
-        alert('Voice recognition is not supported in this browser. Please use Chrome or Edge.');
-        return;
-      }
-      
-      console.log('✅ Speech recognition supported');
-      const recognition = new SpeechRecognition();
-    recognition.continuous = true;
-    recognition.interimResults = false;
-    recognition.maxAlternatives = 3;
-    recognition.lang = "en-US";
-    recognitionRef.current = recognition;
-    const isRecognizingRef = { current: false };
-    
-    console.log('⚙️ Recognition configured:', {
-      continuous: recognition.continuous,
-      interimResults: recognition.interimResults,
-      lang: recognition.lang
-    });
-
-    const safeRecognition = () => {
-      if (!isSpeakingRef.current && !isRecognizingRef.current && !isStartingRef.current && voiceActivated) {
-        try {
-          console.log('▶️ Starting voice recognition...');
-          isStartingRef.current = true;
-          recognition.start();
-        } catch (err) {
-          console.error('❌ Recognition start error:', err);
-          isStartingRef.current = false;
-          // Wait longer before retry on error
-          if (err.name === "InvalidStateError") {
-            setTimeout(safeRecognition, 3000);
-          }
-        }
-      } else {
-        console.log('⏸️ Skipping start - conditions not met');
-      }
-    };
-
-    recognition.onstart = () => { 
-      console.log('🎤 Voice recognition started');
-      isRecognizingRef.current = true;
-      isStartingRef.current = false;
-      setListening(true); 
-    };
-    recognition.onend = () => { 
-      console.log('🛑 Voice recognition ended');
-      isRecognizingRef.current = false;
-      isStartingRef.current = false;
-      setListening(false);
-      
-      // Only restart if not speaking and voice is still activated
-      if (!isSpeakingRef.current && voiceActivated) {
-        console.log('🔄 Restarting voice recognition...');
-        setTimeout(safeRecognition, 2000); // Longer delay to prevent abort errors
-      }
-    };
-    recognition.onerror = (event) => {
-      console.error('❌ Voice recognition error:', event.error);
-      isRecognizingRef.current = false;
-      isStartingRef.current = false;
-      setListening(false);
-      
-      // Only restart on specific errors, not on abort
-      if (event.error === 'no-speech' || event.error === 'audio-capture') {
-        console.log('🔄 Restarting after error...');
-        setTimeout(safeRecognition, 3000);
-      } else if (event.error === 'aborted') {
-        console.log('⏹️ Recognition aborted - not restarting');
-      }
-    };
-
-    recognition.onresult = async (e) => {
-      console.log('🔊 Speech results received:', e.results.length);
-      
-      // Process all results to find the best transcript
-      let bestTranscript = '';
-      let isFinal = false;
-      
-      for (let i = 0; i < e.results.length; i++) {
-        const result = e.results[i];
-        const transcript = result[0].transcript.trim();
-        console.log(`Result ${i}: "${transcript}" (final: ${result.isFinal}, confidence: ${result[0].confidence})`);
-        
-        if (result.isFinal && transcript.length > bestTranscript.length) {
-          bestTranscript = transcript;
-          isFinal = true;
-        } else if (!isFinal && transcript.length > bestTranscript.length) {
-          bestTranscript = transcript;
-        }
-      }
-      
-      console.log(`🎤 Best transcript: "${bestTranscript}" (final: ${isFinal})`);
-      
-      if (bestTranscript.length > 2) {
-        console.log('✅ Processing voice command:', bestTranscript);
-        try {
-          setUserText(bestTranscript);
-          recognition.stop();
-          isRecognizingRef.current = false;
-
-          inputValue.current = bestTranscript;
-          console.log('🚀 Calling handleSubmit with:', bestTranscript);
-          await handleSubmit();
-          console.log('✓ handleSubmit completed');
-        } catch (err) { 
-          console.error("❌ Voice command error:", err);
-          speak("Sorry, I encountered an error processing your request.");
-        }
-      } else {
-        console.log('⚠️ Transcript too short, ignoring');
-      }
-    };
-    
-    recognition.onspeechstart = () => {
-      console.log('🗣️ Speech started - user is speaking');
-    };
-    
-    recognition.onspeechend = () => {
-      console.log('🔇 Speech ended - user stopped speaking');
-    };
-      // Store recognition in ref for manual testing
-      recognitionRef.current = recognition;
-      
-      // Auto-start voice recognition
-      console.log('▶️ Auto-starting voice recognition');
-      setTimeout(safeRecognition, 1000); // Small delay to ensure setup is complete
-      
-      const fallback = setInterval(() => { 
-        if (!isSpeakingRef.current && !isRecognizingRef.current && !isStartingRef.current) {
-          safeRecognition();
-        }
-      }, 10000);
-      
-      return () => {
-        recognition.stop();
-        setListening(false);
-        isRecognizingRef.current = false;
-        isStartingRef.current = false;
-        clearInterval(fallback);
-      };
-    };
-
-    initVoiceRecognition();
-  }, [userData, voiceActivated]);
-
-  // ------------------- WELCOME SPEECH -------------------
-  useEffect(() => {
-    if (userData?.name && userData?.assistantName) {
-      speak(`Hello ${userData.name}, what can I help you with?`);
-      
-      // Test API call
-      setTimeout(async () => {
-        try {
-          console.log('🧪 Testing askToAssistant API...');
-          const res = await fetch(`${serverUrl}/api/user/askToAssistant`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            credentials: "include",
-            body: JSON.stringify({ command: "Hello, testing connection" }),
-          });
-          console.log('📡 Response status:', res.status);
-          console.log('📡 Response headers:', res.headers);
-          
-          if (res.ok) {
-            const data = await res.json();
-            console.log('✅ API test successful:', data);
-          } else {
-            const errorText = await res.text();
-            console.error('❌ API test failed with status:', res.status, errorText);
-          }
-        } catch (err) {
-          console.error('❌ API test failed:', err);
-        }
-      }, 2000);
+        recognitionRef.current.abort();
+      } catch (e) {}
+      recognitionRef.current = null;
     }
-  }, [userData]);
+    setIsListening(false);
+  }
 
-  // ------------------- JSX -------------------
+  // --- Effects ---
+  useEffect(() => {
+    if (userData?.assistantName && isWakeWordActive && !loading && !isProcessing && !isSpeaking) {
+      const timer = setTimeout(() => {
+        if (!isListening && !isProcessing && !isSpeaking && !recognitionRef.current) {
+          startListening();
+        }
+      }, 2000); // Longer delay
+      return () => clearTimeout(timer);
+    } else {
+      stopListening();
+    }
+  }, [userData?.assistantName, isWakeWordActive, loading, isAssistantAwake, isProcessing, isSpeaking]);
+
+  useEffect(() => {
+    return () => stopListening();
+  }, []);
+  
+  // Sync ref with state for UI updates
+  useEffect(() => {
+    setIsAssistantAwake(isAssistantAwakeRef.current);
+  }, [isAssistantAwakeRef.current]);
+
+  // --- Initial Greeting (removed - assistant starts sleeping) ---
+
+  // --- UI ---
   return (
     <div className="w-full h-screen bg-black text-white flex items-center justify-center relative">
-      {/* Voice Status */}
-      <div className="absolute top-4 left-4 px-4 py-2 bg-green-500 text-white rounded-full z-50">
-        🎤 Voice {listening ? 'Listening...' : 'Ready'}
-      </div>
-      
-      {/* Manual Test Button */}
-      <button 
-        onClick={() => {
-          inputValue.current = "test voice command";
-          handleSubmit();
-        }}
-        className="absolute top-16 left-4 px-4 py-2 bg-blue-500 text-white rounded z-50"
-      >
-        Test API
-      </button>
-
-      {/* Top Buttons */}
+      {/* Top-right menu */}
       <div className="absolute top-4 right-4 flex gap-4 z-50">
-        {!menuOpen && <IoMenuOutline onClick={() => setMenuOpen(true)} className="lg:hidden text-white w-[30px] h-[30px] cursor-pointer" />}
+        {!menuOpen && (
+          <IoMenuOutline
+            onClick={() => setMenuOpen(true)}
+            className="lg:hidden text-white w-[30px] h-[30px] cursor-pointer"
+          />
+        )}
         {menuOpen && (
           <div className="absolute lg:hidden top-0 left-0 w-full h-full bg-[#00000084] backdrop-blur-lg z-40 flex flex-col items-center justify-center gap-6">
-            <RxCross2 onClick={() => setMenuOpen(false)} className="text-white absolute top-[20px] right-[20px] w-[30px] h-[30px] cursor-pointer" />
-            <button onClick={() => { navigate("/customize"); setMenuOpen(false); }} className="absolute top-[60px] right-[20px] px-4 py-2 rounded-full border border-blue-500 hover:bg-blue-600 hover:text-black transition-all">Customize</button>
-            <button onClick={() => { handleLogOut(); setMenuOpen(false); }} className="absolute top-[120px] right-[20px] px-4 py-2 rounded-full border border-blue-500 hover:bg-blue-600 hover:text-black transition-all">Logout</button>
+            <RxCross2
+              onClick={() => setMenuOpen(false)}
+              className="text-white absolute top-[20px] right-[20px] w-[30px] h-[30px] cursor-pointer"
+            />
+            <button
+              onClick={() => {
+                handleLogOut();
+                setMenuOpen(false);
+              }}
+              className="absolute top-[60px] right-[20px] px-4 py-2 rounded-full border border-blue-500 hover:bg-blue-600 hover:text-black transition-all"
+            >
+              Logout
+            </button>
           </div>
         )}
-        <button onClick={() => navigate("/customize")} className="hidden lg:block px-4 py-2 rounded-full border border-blue-500 hover:bg-blue-600 hover:text-black transition-all">Customize</button>
-        <button onClick={handleLogOut} className="hidden lg:block px-4 py-2 rounded-full border border-blue-500 hover:bg-blue-600 hover:text-black transition-all">Logout</button>
+        <button
+          onClick={handleLogOut}
+          className="hidden lg:block px-4 py-2 rounded-full border border-blue-500 hover:bg-blue-600 hover:text-black transition-all"
+        >
+          Logout
+        </button>
       </div>
 
-      {/* Avatar */}
+      {/* Assistant Center */}
       <div className="absolute top-[80px] flex flex-col items-center">
-        <video src={userData?.assistantImage} className="w-[300px] h-[300px] object-cover rounded-full" autoPlay loop muted playsInline />
-        <h1 className="text-2xl font-semibold mt-4">I'm <span className="text-blue-400">{userData?.assistantName}</span></h1>
-        {!aiText && <img src={userImg} className="w-[300px]" />}
-        {aiText && <img src={aiImg} className="w-[300px]" />}
+        <video
+          src={userData?.assistantImage}
+          className={`w-[300px] h-[300px] object-cover rounded-full transition-all duration-500 ${
+            isAssistantAwake ? 'opacity-100 brightness-100' : 'opacity-50 brightness-50 grayscale'
+          }`}
+          autoPlay
+          loop
+          muted
+          playsInline
+        />
+        <h1 className={`text-2xl font-semibold mt-4 transition-all duration-500 ${
+          isAssistantAwake ? 'text-white' : 'text-gray-400'
+        }`}>
+          I'm <span className={isAssistantAwake ? 'text-blue-400' : 'text-gray-500'}>{userData?.assistantName}</span>
+        </h1>
+        <p className="text-sm text-blue-300 mt-2 animate-pulse">
+          {(isAssistantAwake || isAssistantAwakeRef.current) ? 
+            `🎙️ ${userData?.assistantName} is listening...` : 
+            `😴 ${userData?.assistantName} is sleeping. Say "wake up ${userData?.assistantName}" to wake me up.`
+          }
+        </p>
+
+        {!aiText && !loading && (
+          <img src={userImg} className="w-[300px]" alt="User listening" />
+        )}
+        {(aiText || loading) && (
+          <img src={aiImg} className="w-[300px]" alt="AI speaking" />
+        )}
       </div>
 
-      {/* Left Column */}
+      {/* Left Input Panel */}
       <div className="absolute left-[30px] w-[30%] flex-col items-start gap-4 sm:flex hidden md:w-[20%]">
         <textarea
           ref={inputRef}
           value={input}
-          onChange={(e) => { setInput(e.target.value); inputValue.current = e.target.value; }}
-          placeholder="Type your code or ask something..."
+          onChange={(e) => {
+            setInput(e.target.value);
+            inputValue.current = e.target.value;
+          }}
+          placeholder={isAssistantAwake ? "Type your command..." : "Type 'wake up' to wake assistant..."}
           rows={10}
           className="p-4 w-full bg-black border border-blue-500 rounded-md text-white resize-none focus:outline-none focus:ring-2 focus:ring-blue-400 shadow"
         />
-        <button onClick={handleSubmit} className="bg-blue-500 px-4 py-2 rounded text-white hover:bg-blue-600 transition">Submit</button>
-        {showOutput && <div className="w-full mt-2 text-green-300 font-mono text-sm whitespace-pre-wrap"><span className="text-blue-400">You:</span> {userText || input}</div>}
+        <div className="flex gap-2">
+          <button
+            onClick={() => handleSubmit()}
+            disabled={loading}
+            className="bg-blue-500 px-4 py-2 rounded text-white hover:bg-blue-600 transition disabled:bg-gray-500"
+          >
+            {isAssistantAwake ? "Submit" : "Wake Up"}
+          </button>
+          
+        </div>
+        
+        
       </div>
 
-      {/* Right Column */}
+      {/* Right panel: AI Response */}
       {showOutput && (
-        <div className="absolute right-[30px] w-[30%] md:w-[20%] bg-black border border-blue-500 p-4 rounded-lg text-green-400 whitespace-pre-wrap max-h-[50vh] overflow-auto shadow sm:flex hidden">
+        <div className="absolute right-[-500px] w-[30%] md:w-[20%] bg-black border border-blue-500 p-4 rounded-lg text-green-400 whitespace-pre-wrap max-h-[50vh] overflow-auto shadow sm:flex hidden relative">
           {loading ? "Loading..." : response}
-          {response && (
-            <button onClick={() => { navigator.clipboard.writeText(response); setCopied(true); setTimeout(() => setCopied(false), 1500); }} className="absolute top-2 right-2 bg-blue-500 text-white px-3 py-1 text-sm rounded hover:bg-blue-600 transition">{copied ? "Copied!" : "Copy"}</button>
+          {response && !loading && (
+            <button
+              onClick={() => {
+                navigator.clipboard.writeText(response);
+                setCopied(true);
+                setTimeout(() => setCopied(false), 1500);
+              }}
+              className="absolute top-2 right-2 bg-blue-500 text-white px-3 py-1 text-sm rounded hover:bg-blue-600 transition"
+            >
+              {copied ? "Copied!" : "Copy"}
+            </button>
           )}
         </div>
       )}
