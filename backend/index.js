@@ -17,7 +17,7 @@ const app = express();
 
 // CORS config for frontend (Vite)
 app.use(cors({
-  origin: "http://localhost:5173",
+  origin: "https://aagami-frontend.onrender.com",
   credentials: true
 }));
 
