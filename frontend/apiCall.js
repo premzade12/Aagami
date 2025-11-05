@@ -3,7 +3,7 @@ import { handleAssistantResponse } from './handleCommands.js';
 // Function to send command to assistant
 export const sendCommandToAssistant = async (command) => {
   try {
-    const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/users/ask`, {
+    const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/user/ask`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
