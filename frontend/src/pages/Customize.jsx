@@ -86,7 +86,7 @@ function Customize() {
         <input type="file" accept='video/*' ref={inputImage} hidden onChange={handleImage} />
       </div>
 
-      {/* 🗣 Voice Selector */}
+      {/* 🗣 Voice Selector
       <div className='mb-[20px] flex flex-col items-center gap-2'>
         <label className="text-lg font-semibold">Select Voice</label>
         <select
@@ -101,7 +101,7 @@ function Customize() {
             </option>
           ))}
         </select>
-      </div>
+      </div> */}
 
       {/* ✅ Next Button */}
       {selectedImage && (
