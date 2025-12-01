@@ -539,16 +539,16 @@ export const visualSearch = async (req, res) => {
       return res.status(400).json({ error: "No image provided" });
     }
 
-    // Convert image to base64
-    const imageBuffer = req.file.buffer;
-    const base64Image = imageBuffer.toString('base64');
+    // For now, provide a generic response since we don't have vision API setup
+    const responses = [
+      "I can see the camera feed is active. The visual search feature is working, but I need a vision-enabled AI model to analyze images in detail.",
+      "The camera is capturing the scene. To provide detailed visual analysis, I would need access to a computer vision service.",
+      "I can detect that an image was captured from your camera. For specific object recognition, I would need additional AI vision capabilities."
+    ];
     
-    // Use Gemini Vision API for image analysis
-    const prompt = "Analyze this image and describe what you see in detail. Include objects, people, text, colors, and any other relevant information.";
+    const randomResponse = responses[Math.floor(Math.random() * responses.length)];
     
-    const result = await geminiResponse(`${prompt}\n[IMAGE_DATA: ${base64Image}]`, "Assistant", "User");
-    
-    res.json({ description: result });
+    res.json({ description: randomResponse });
   } catch (error) {
     console.error("❌ Visual search error:", error);
     res.status(500).json({ error: "Visual search failed" });
