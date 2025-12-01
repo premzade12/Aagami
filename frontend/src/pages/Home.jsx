@@ -266,11 +266,12 @@ function Home() {
       
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
+        setCameraActive(true); // Set immediately
+        console.log('📷 Camera UI activated');
+        
         videoRef.current.onloadedmetadata = () => {
           console.log('📷 Video metadata loaded');
-          setCameraActive(true);
         };
-        console.log('📷 Camera enabled successfully');
       } else {
         console.log('⚠️ Video ref not available');
       }
@@ -761,6 +762,7 @@ function Home() {
       {/* Left Input Panel */}
       <div className="absolute left-[30px] w-[30%] flex-col items-start gap-4 sm:flex hidden md:w-[20%]">
         {/* Camera View */}
+        {console.log('📷 Camera active state:', cameraActive)}
         {cameraActive && (
           <div className="relative w-full aspect-square bg-black border border-blue-500 rounded-md overflow-hidden">
             <video
