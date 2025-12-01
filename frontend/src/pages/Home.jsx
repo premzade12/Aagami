@@ -28,6 +28,7 @@ function Home() {
   const [retryCount, setRetryCount] = useState(0);
   const [isProcessing, setIsProcessing] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
+  const isSpeakingRef = useRef(false); // Global ref to block recognition
 
   const inputRef = useRef();
   const inputValue = useRef("");
@@ -39,11 +40,21 @@ function Home() {
   async function speak(text, audioUrl = null, language = 'en-US') {
     if (!text) return;
     
-    // COMPLETELY disable listening while speaking
+    // COMPLETELY disable listening while speaking - CRITICAL for preventing feedback
+    console.log('🔇 Disabling all listening during speech');
     setIsSpeaking(true);
+    isSpeakingRef.current = true; // Global flag
     setIsWakeWordActive(false);
     stopListening();
     setIsListening(false);
+    
+    // Force abort any existing recognition
+    if (recognitionRef.current) {
+      try {
+        recognitionRef.current.abort();
+        recognitionRef.current = null;
+      } catch (e) {}
+    }
     
     // Cancel any existing speech
     synth.cancel();
@@ -68,13 +79,16 @@ function Home() {
       
       return new Promise((resolve, reject) => {
         audio.onended = () => {
+          console.log('🔊 Google TTS finished, waiting before resuming listening');
           setTimeout(() => {
             setIsSpeaking(false);
+            isSpeakingRef.current = false;
             if (!isProcessing) {
+              console.log('🎤 Resuming listening after Google TTS');
               setIsWakeWordActive(true);
             }
             resolve();
-          }, 2000);
+          }, 3000);
         };
         
         audio.onerror = () => {
@@ -194,21 +208,25 @@ function Home() {
       }
       
       utterance.onend = () => {
+        console.log('🔊 Browser TTS finished, waiting before resuming listening');
         setTimeout(() => {
           setIsSpeaking(false);
+          isSpeakingRef.current = false;
           if (!isProcessing) {
+            console.log('🎤 Resuming listening after browser TTS');
             setIsWakeWordActive(true);
           }
-        }, 2000);
+        }, 3000);
       };
       
       utterance.onerror = () => {
+        console.log('🔊 Browser TTS error, resuming listening');
         setTimeout(() => {
           setIsSpeaking(false);
           if (!isProcessing) {
             setIsWakeWordActive(true);
           }
-        }, 2000);
+        }, 3000);
       };
       
       synth.speak(utterance);
@@ -216,11 +234,12 @@ function Home() {
       console.log('Browser TTS failed:', e);
       // Resume listening even if TTS fails
       setTimeout(() => {
+        console.log('🔊 TTS failed, resuming listening after delay');
         setIsSpeaking(false);
         if (!isProcessing) {
           setIsWakeWordActive(true);
         }
-      }, 10000); // Even longer delay for failures
+      }, 5000); // Reasonable delay for failures
     }
     } // Close useBrowserTTS function
   }
@@ -386,16 +405,21 @@ function Home() {
     rec.lang = "hi-IN"; // Hindi-India for mixed language support
 
     rec.onresult = (e) => {
+      // CRITICAL: Block all recognition during speech using ref
+      if (isSpeakingRef.current) {
+        console.log('🚫 Ignoring recognition during speech');
+        return;
+      }
+      
       const transcript = e.results[0][0].transcript.toLowerCase().trim();
-      const confidence = e.results[0][0].confidence || 0.8; // Default confidence
+      const confidence = e.results[0][0].confidence || 0.8;
       const assistantName = userData?.assistantName?.toLowerCase();
       
-      if (!transcript || transcript.length < 2) return; // Ignore very short inputs
+      if (!transcript || transcript.length < 2) return;
       
       setLastHeard(transcript);
       console.log('🎤 Final:', transcript, 'Confidence:', confidence);
       
-      // Lower confidence threshold for better recognition
       if (confidence < 0.2) {
         console.log('⚠️ Very low confidence, ignoring:', confidence);
         return;
@@ -477,8 +501,13 @@ function Home() {
       setIsListening(false);
       recognitionRef.current = null;
       
+      // Only restart if not speaking
       if (isWakeWordActive && !loading && !isProcessing && !isSpeaking) {
-        setTimeout(startListening, 2000);
+        setTimeout(() => {
+          if (!isSpeaking && isWakeWordActive) {
+            startListening();
+          }
+        }, 2000);
       }
     };
 
@@ -501,6 +530,7 @@ function Home() {
   // --- Start Listening ---
   function startListening() {
     if (!isWakeWordActive || loading || isListening || isProcessing || isSpeaking || recognitionRef.current) {
+      console.log('❌ Cannot start listening:', { isWakeWordActive, loading, isListening, isProcessing, isSpeaking, hasRecognition: !!recognitionRef.current });
       return;
     }
     
@@ -519,8 +549,10 @@ function Home() {
   }
 
   function stopListening() {
+    console.log('🛑 Stopping all speech recognition');
     if (recognitionRef.current) {
       try {
+        recognitionRef.current.stop();
         recognitionRef.current.abort();
       } catch (e) {}
       recognitionRef.current = null;
