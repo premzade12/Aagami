@@ -84,11 +84,10 @@ function Home() {
             setIsSpeaking(false);
             isSpeakingRef.current = false;
             if (!isProcessing) {
-              console.log('🎤 Resuming listening after Google TTS');
               setIsWakeWordActive(true);
             }
             resolve();
-          }, 3000);
+          }, 1000);
         };
         
         audio.onerror = () => {
@@ -128,25 +127,25 @@ function Home() {
         utterance.lang = language;
       }
       
-      // Smooth and clear voice parameters
+      // Faster voice parameters
       if (language === 'hi-IN') {
-        utterance.rate = 1.1;
+        utterance.rate = 1.3;
         utterance.pitch = 0.95;
         utterance.volume = 1.0;
       } else if (language === 'mr-IN') {
-        utterance.rate = 1.1;
+        utterance.rate = 1.3;
         utterance.pitch = 0.95;
         utterance.volume = 1.0;
       } else if (isExcited) {
-        utterance.rate = 1.15;
+        utterance.rate = 1.4;
         utterance.pitch = 1.1;
         utterance.volume = 0.95;
       } else if (isQuestion) {
-        utterance.rate = 1.1;
+        utterance.rate = 1.3;
         utterance.pitch = 1.05;
         utterance.volume = 0.9;
       } else {
-        utterance.rate = 1.1;
+        utterance.rate = 1.3;
         utterance.pitch = 1.0;
         utterance.volume = 0.9;
       }
@@ -213,10 +212,9 @@ function Home() {
           setIsSpeaking(false);
           isSpeakingRef.current = false;
           if (!isProcessing) {
-            console.log('🎤 Resuming listening after browser TTS');
             setIsWakeWordActive(true);
           }
-        }, 3000);
+        }, 1000);
       };
       
       utterance.onerror = () => {
@@ -418,12 +416,12 @@ function Home() {
     setLoading(false);
     setIsProcessing(false);
     
-    // Resume listening after response (longer delay)
+    // Resume listening after response
     setTimeout(() => {
       if (!isSpeaking) {
         setIsWakeWordActive(true);
       }
-    }, 3000);
+    }, 1000);
   }
 
   // --- Enhanced Multi-language Recognition ---
