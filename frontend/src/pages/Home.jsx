@@ -304,13 +304,31 @@ function Home() {
     ctx.drawImage(videoRef.current, 0, 0);
     
     canvas.toBlob(async (blob) => {
-      const formData = new FormData();
-      formData.append('image', blob, 'camera-capture.jpg');
-      
-      // Use Google Lens search
-      const searchUrl = 'https://lens.google.com/uploadbyurl?url=';
-      window.open(searchUrl, '_blank');
-      speak('Opening Google Lens for visual search.');
+      try {
+        const formData = new FormData();
+        formData.append('image', blob, 'camera-capture.jpg');
+        
+        speak('Analyzing what I see...');
+        
+        const res = await fetch(`${serverUrl}/api/user/visualSearch`, {
+          method: 'POST',
+          credentials: 'include',
+          body: formData
+        });
+        
+        const data = await res.json();
+        if (data.description) {
+          speak(data.description);
+          setResponse(data.description);
+          setAiText(data.description);
+          setShowOutput(true);
+        } else {
+          speak('I could not analyze the image properly.');
+        }
+      } catch (err) {
+        console.log('Visual search failed:', err);
+        speak('Visual search failed. Please try again.');
+      }
     });
   }
 
@@ -784,12 +802,7 @@ function Home() {
             >
               ✕
             </button>
-            <button
-              onClick={captureAndSearch}
-              className="absolute bottom-2 left-1/2 transform -translate-x-1/2 bg-blue-500 text-white px-3 py-1 text-sm rounded hover:bg-blue-600 transition"
-            >
-              🔍 Search
-            </button>
+
           </div>
         )}
         

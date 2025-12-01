@@ -532,4 +532,27 @@ export const setUserVoice = async (req, res) => {
   }
 };
 
+// ✅ Visual Search with AI
+export const visualSearch = async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: "No image provided" });
+    }
+
+    // Convert image to base64
+    const imageBuffer = req.file.buffer;
+    const base64Image = imageBuffer.toString('base64');
+    
+    // Use Gemini Vision API for image analysis
+    const prompt = "Analyze this image and describe what you see in detail. Include objects, people, text, colors, and any other relevant information.";
+    
+    const result = await geminiResponse(`${prompt}\n[IMAGE_DATA: ${base64Image}]`, "Assistant", "User");
+    
+    res.json({ description: result });
+  } catch (error) {
+    console.error("❌ Visual search error:", error);
+    res.status(500).json({ error: "Visual search failed" });
+  }
+};
+
 

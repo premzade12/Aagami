@@ -8,7 +8,8 @@ import {
   getHistory,        // ✅ new controller
   testGemini,        // ✅ test controller
   getVoices,         // ✅ voice controller
-  setUserVoice       // ✅ voice controller
+  setUserVoice,      // ✅ voice controller
+  visualSearch       // ✅ visual search controller
 } from "../controllers/user.controllers.js";
 import isAuth from "../middlewares/isAuth.js";
 import upload from "../middlewares/multer.js";
@@ -31,5 +32,8 @@ userRouter.get("/test-gemini", testGemini);            // Test Gemini API
 // ✅ Voice routes
 userRouter.get("/voices", getVoices);                  // Get available voices
 userRouter.post("/set-voice", isAuth, setUserVoice);   // Set user voice
+
+// ✅ Visual search route
+userRouter.post("/visualSearch", isAuth, upload.single("image"), visualSearch);
 
 export default userRouter;
