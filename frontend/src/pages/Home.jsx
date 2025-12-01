@@ -295,16 +295,25 @@ function Home() {
   }
 
   async function captureAndSearch() {
-    if (!videoRef.current || !canvasRef.current) return;
+    if (!videoRef.current || !canvasRef.current) {
+      speak('Camera nahi mila. Pehle camera on kariye.', null, 'hi-IN');
+      return;
+    }
     
     const canvas = canvasRef.current;
     const ctx = canvas.getContext('2d');
-    canvas.width = videoRef.current.videoWidth;
-    canvas.height = videoRef.current.videoHeight;
+    canvas.width = videoRef.current.videoWidth || 640;
+    canvas.height = videoRef.current.videoHeight || 480;
     ctx.drawImage(videoRef.current, 0, 0);
     
     canvas.toBlob(async (blob) => {
+      if (!blob) {
+        speak('Image capture nahi hua. Phir try kariye.', null, 'hi-IN');
+        return;
+      }
+      
       try {
+        console.log('📷 Sending image for analysis, size:', blob.size);
         const formData = new FormData();
         formData.append('image', blob, 'camera-capture.jpg');
         
@@ -315,6 +324,8 @@ function Home() {
         });
         
         const data = await res.json();
+        console.log('📷 Visual search response:', data);
+        
         if (data.description) {
           speak(data.description, null, 'hi-IN');
           setResponse(data.description);
@@ -327,7 +338,7 @@ function Home() {
         console.log('Visual search failed:', err);
         speak('Visual search fail ho gaya. Phir se try kariye.', null, 'hi-IN');
       }
-    });
+    }, 'image/jpeg', 0.8);
   }
 
   // --- Screenshot Function ---
@@ -784,7 +795,7 @@ function Home() {
       {/* Left Input Panel */}
       <div className="absolute left-[30px] w-[30%] flex-col items-start gap-4 sm:flex hidden md:w-[20%]">
         {/* Camera View */}
-        {console.log('📷 Camera active state:', cameraActive)}
+
         {cameraActive && (
           <div className="relative w-full aspect-square bg-black border border-blue-500 rounded-md overflow-hidden">
             <video
@@ -831,7 +842,7 @@ function Home() {
 
       {/* Right panel: AI Response */}
       {showOutput && (
-        <div className="absolute right-[-500px] w-[30%] md:w-[20%] bg-black border border-blue-500 p-4 rounded-lg text-green-400 whitespace-pre-wrap max-h-[50vh] overflow-auto shadow sm:flex hidden relative">
+        <div className="absolute right-[30px] w-[30%] md:w-[20%] bg-black border border-blue-500 p-4 rounded-lg text-green-400 whitespace-pre-wrap max-h-[50vh] overflow-auto shadow sm:flex hidden relative">
           {loading ? "Loading..." : response}
           {response && !loading && (
             <button
