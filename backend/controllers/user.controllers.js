@@ -627,9 +627,10 @@ export const visualSearch = async (req, res) => {
       
     } catch (visionError) {
       console.error("❌ Google Vision API failed:", visionError.message);
+      console.error("❌ Full error:", visionError.response?.data || visionError);
       
-      // Fallback response
-      const fallbackResponse = "Main camera dekh raha hun lekin abhi detailed analysis nahi kar pa raha. Vision service ki zarurat hai.";
+      // Better fallback response explaining the issue
+      const fallbackResponse = "Main camera feed dekh raha hun. Google Vision API abhi setup nahi hai properly, isliye detailed analysis nahi kar pa raha. Lekin camera working hai!";
       res.json({ description: fallbackResponse });
     }
     
