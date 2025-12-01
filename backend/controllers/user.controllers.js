@@ -538,30 +538,43 @@ export const setUserVoice = async (req, res) => {
   }
 };
 
-// ✅ Visual Search with Gemini Vision API
+// ✅ Visual Search with Debug Logging
 export const visualSearch = async (req, res) => {
   try {
-    console.log('📷 Visual search request received');
+    console.log('📷 === VISUAL SEARCH DEBUG START ===');
+    console.log('📷 Request method:', req.method);
+    console.log('📷 Request headers:', JSON.stringify(req.headers, null, 2));
+    console.log('📷 Request body keys:', Object.keys(req.body || {}));
+    console.log('📷 Request file:', req.file ? 'Present' : 'Missing');
     
     if (!req.file) {
-      console.log('❌ No image file provided');
+      console.log('❌ ERROR: No image file provided');
+      console.log('📷 Available req properties:', Object.keys(req));
       return res.status(400).json({ error: "No image provided" });
     }
 
-    console.log('📷 Image received, size:', req.file.size);
+    console.log('📷 Image details:');
+    console.log('  - Size:', req.file.size);
+    console.log('  - Mimetype:', req.file.mimetype);
+    console.log('  - Fieldname:', req.file.fieldname);
+    console.log('  - Buffer length:', req.file.buffer?.length);
     
     // Convert image to base64
     const imageBuffer = req.file.buffer;
     const base64Image = imageBuffer.toString('base64');
+    console.log('📷 Base64 conversion successful, length:', base64Image.length);
     
     try {
       // Use Gemini Vision API for actual image analysis
-      const apiUrl = process.env.GEMINI_API_URL.replace('generateContent', 'generateContent');
+      const apiUrl = process.env.GEMINI_API_URL;
       const apiKey = process.env.GEMINI_API_KEY;
       
-      const visionPrompt = "Describe what you see in this image in Hindi. Be specific about objects, people, colors, text, and environment. Give a natural description as if you're looking through a camera.";
+      console.log('📷 API URL:', apiUrl);
+      console.log('📷 API Key exists:', !!apiKey);
       
-      const result = await axios.post(`${apiUrl}?key=${apiKey}`, {
+      const visionPrompt = "Describe what you see in this image in Hindi. Be specific about objects, people, colors, text, and environment.";
+      
+      const requestPayload = {
         "contents": [{
           "parts": [
             { "text": visionPrompt },
@@ -573,26 +586,40 @@ export const visualSearch = async (req, res) => {
             }
           ]
         }]
-      });
+      };
+      
+      console.log('📷 Making Gemini Vision API call...');
+      const result = await axios.post(`${apiUrl}?key=${apiKey}`, requestPayload);
+      
+      console.log('📷 Gemini API response status:', result.status);
+      console.log('📷 Gemini API response data:', JSON.stringify(result.data, null, 2));
       
       if (result.data?.candidates?.[0]?.content?.parts?.[0]?.text) {
         const description = result.data.candidates[0].content.parts[0].text;
-        console.log('📷 Gemini Vision analysis:', description.substring(0, 100) + '...');
+        console.log('📷 SUCCESS: Vision analysis complete');
+        console.log('📷 Description:', description);
         res.json({ description });
       } else {
+        console.log('❌ ERROR: No valid response structure from Gemini Vision');
         throw new Error("No valid response from Gemini Vision");
       }
       
     } catch (visionError) {
-      console.error("❌ Gemini Vision failed:", visionError.message);
+      console.log('❌ VISION API ERROR:');
+      console.log('  - Message:', visionError.message);
+      console.log('  - Status:', visionError.response?.status);
+      console.log('  - Data:', JSON.stringify(visionError.response?.data, null, 2));
       
       // Fallback response
-      const fallbackResponse = "Main camera feed dekh raha hun lekin abhi detailed analysis nahi kar pa raha. Vision API setup ki zarurat hai.";
+      const fallbackResponse = "Main camera feed dekh raha hun lekin abhi detailed analysis nahi kar pa raha. Vision API mein issue hai.";
       res.json({ description: fallbackResponse });
     }
     
   } catch (error) {
-    console.error("❌ Visual search error:", error);
+    console.log('❌ GENERAL ERROR:');
+    console.log('  - Message:', error.message);
+    console.log('  - Stack:', error.stack);
+    console.log('📷 === VISUAL SEARCH DEBUG END ===');
     res.status(500).json({ error: "Visual search failed" });
   }
 };
