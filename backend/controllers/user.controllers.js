@@ -548,7 +548,11 @@ export const visualSearch = async (req, res) => {
     const base64Image = req.file.buffer.toString('base64');
     const apiKey = process.env.GEMINI_API_KEY;
     
-    // Use gemini-pro-vision model for image analysis
+    console.log('📷 Vision API Debug:');
+    console.log('- Image size:', req.file.size);
+    console.log('- Base64 length:', base64Image.length);
+    console.log('- API Key exists:', !!apiKey);
+    
     const visionApiUrl = "https://generativelanguage.googleapis.com/v1beta/models/gemini-pro-vision:generateContent";
     
     const requestPayload = {
@@ -565,13 +569,20 @@ export const visualSearch = async (req, res) => {
       }]
     };
     
+    console.log('📷 Making API call to:', visionApiUrl);
     const result = await axios.post(`${visionApiUrl}?key=${apiKey}`, requestPayload);
+    
+    console.log('📷 API Response status:', result.status);
+    console.log('📷 API Response data:', JSON.stringify(result.data, null, 2));
     
     const description = result.data?.candidates?.[0]?.content?.parts?.[0]?.text || "Camera में कुछ दिख रहा है लेकिन पूरी जानकारी नहीं मिल पा रही।";
     res.json({ description });
     
   } catch (error) {
-    console.error('❌ Vision API Error:', error.response?.status, error.response?.data);
+    console.error('❌ Vision API Error Details:');
+    console.error('- Status:', error.response?.status);
+    console.error('- Data:', JSON.stringify(error.response?.data, null, 2));
+    console.error('- Message:', error.message);
     res.json({ description: "Camera feed देख रहा हूं लेकिन अभी analyze नहीं कर पा रहा।" });
   }
 };
