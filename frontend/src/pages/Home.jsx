@@ -29,6 +29,9 @@ function Home() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
   const isSpeakingRef = useRef(false); // Global ref to block recognition
+  const [cameraActive, setCameraActive] = useState(false);
+  const videoRef = useRef(null);
+  const canvasRef = useRef(null);
 
   const inputRef = useRef();
   const inputValue = useRef("");
@@ -254,6 +257,51 @@ function Home() {
     }
   }
 
+  // --- Camera Functions ---
+  async function enableCamera() {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+        setCameraActive(true);
+        console.log('📷 Camera enabled');
+      }
+    } catch (err) {
+      console.log('Camera access failed:', err);
+      speak('Camera access denied. Please allow camera permission.');
+    }
+  }
+
+  function disableCamera() {
+    if (videoRef.current && videoRef.current.srcObject) {
+      const tracks = videoRef.current.srcObject.getTracks();
+      tracks.forEach(track => track.stop());
+      videoRef.current.srcObject = null;
+      setCameraActive(false);
+      console.log('📷 Camera disabled');
+    }
+  }
+
+  async function captureAndSearch() {
+    if (!videoRef.current || !canvasRef.current) return;
+    
+    const canvas = canvasRef.current;
+    const ctx = canvas.getContext('2d');
+    canvas.width = videoRef.current.videoWidth;
+    canvas.height = videoRef.current.videoHeight;
+    ctx.drawImage(videoRef.current, 0, 0);
+    
+    canvas.toBlob(async (blob) => {
+      const formData = new FormData();
+      formData.append('image', blob, 'camera-capture.jpg');
+      
+      // Use Google Lens search
+      const searchUrl = 'https://lens.google.com/uploadbyurl?url=';
+      window.open(searchUrl, '_blank');
+      speak('Opening Google Lens for visual search.');
+    });
+  }
+
   // --- Screenshot Function ---
   async function takeScreenshot() {
     try {
@@ -313,6 +361,18 @@ function Home() {
     if (type === "take_screenshot" || type === "screenshot") {
       console.log('📸 Taking screenshot');
       return takeScreenshot();
+    }
+    if (type === "enable_camera" || type === "camera_on") {
+      console.log('📷 Enabling camera');
+      return enableCamera();
+    }
+    if (type === "disable_camera" || type === "camera_off") {
+      console.log('📷 Disabling camera');
+      return disableCamera();
+    }
+    if (type === "visual_search" || type === "search_camera") {
+      console.log('🔍 Visual search');
+      return captureAndSearch();
     }
   }
 
@@ -680,9 +740,33 @@ function Home() {
           }
         </p>
         
+        {/* Camera View */}
+        {cameraActive && (
+          <div className="mt-4 relative">
+            <video
+              ref={videoRef}
+              autoPlay
+              playsInline
+              className="w-[200px] h-[150px] rounded-lg border border-blue-500"
+            />
+            <canvas ref={canvasRef} style={{ display: 'none' }} />
+            <button
+              onClick={disableCamera}
+              className="absolute top-2 right-2 bg-red-500 text-white px-2 py-1 text-xs rounded"
+            >
+              Close
+            </button>
+            <button
+              onClick={captureAndSearch}
+              className="absolute bottom-2 left-1/2 transform -translate-x-1/2 bg-blue-500 text-white px-3 py-1 text-sm rounded"
+            >
+              Search
+            </button>
+          </div>
+        )}
 
         {!aiText && !loading && (
-          <img src={userImg} className="w-[300px]" alt="User listening" />
+          <img src={userImg} className="w-[300px]" alt="User listening" />assName="w-[300px]" alt="User listening" />
         )}
         {(aiText || loading) && (
           <img src={aiImg} className="w-[300px]" alt="AI speaking" />
