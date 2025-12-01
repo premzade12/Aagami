@@ -345,7 +345,8 @@ function Home() {
   // --- Handle command actions ---
   async function handleCommand(data) {
     const { type, action, url, userInput, query } = data;
-    console.log('handleCommand called with:', data);
+    console.log('🔧 handleCommand called with:', data);
+    console.log('🔧 Command type:', type);
     
     if (action === "open_url" && url) return window.open(url, "_blank");
     if (type === "google_search") {
@@ -372,7 +373,7 @@ function Home() {
       return takeScreenshot();
     }
     if (type === "enable_camera" || type === "camera_on") {
-      console.log('📷 Enabling camera');
+      console.log('📷 Camera command detected, calling enableCamera()');
       return enableCamera();
     }
     if (type === "disable_camera" || type === "camera_off") {
@@ -383,6 +384,8 @@ function Home() {
       console.log('🔍 Visual search');
       return captureAndSearch();
     }
+    
+    console.log('⚠️ No matching command type found for:', type);
   }
 
   // --- Handle Text or Voice Command ---
