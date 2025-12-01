@@ -132,8 +132,10 @@ export const askToAssistant = async (req, res) => {
         gemResult = { type: 'disable_camera', response: 'Disabling camera!' };
       } else if (lower.includes('search camera') || lower.includes('visual search') || lower.includes('search what i see') || lower.includes('identify this') || 
                  lower.includes('कैमरा में क्या') || lower.includes('क्या देख रहे') || lower.includes('क्या दिख रहा') || 
-                 lower.includes('camera mein kya') || lower.includes('kya dekh rahe') || lower.includes('kya dikh raha')) {
-        gemResult = { type: 'visual_search', response: 'Visual search kar raha hun!' };
+                 lower.includes('camera mein kya') || lower.includes('kya dekh rahe') || lower.includes('kya dikh raha') ||
+                 lower.includes('seeing in') && lower.includes('camera') || lower.includes('see in') && lower.includes('camera') ||
+                 lower.includes('what do you see') || lower.includes('camera view') || lower.includes('in my camera')) {
+        gemResult = { type: 'visual_search', response: 'Analyzing camera feed!' };
       } else if (lower.includes('call')) {
         // Extract contact name and phone number from "call [name] on [number]" or "call [name] at [number]"
         let contactInfo = command.replace(/call/gi, '').trim();
