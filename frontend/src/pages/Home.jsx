@@ -29,9 +29,6 @@ function Home() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
   const isSpeakingRef = useRef(false); // Global ref to block recognition
-  const [cameraActive, setCameraActive] = useState(false);
-  const videoRef = useRef(null);
-  const canvasRef = useRef(null);
 
   const inputRef = useRef();
   const inputValue = useRef("");
@@ -87,10 +84,11 @@ function Home() {
             setIsSpeaking(false);
             isSpeakingRef.current = false;
             if (!isProcessing) {
+              console.log('🎤 Resuming listening after Google TTS');
               setIsWakeWordActive(true);
             }
             resolve();
-          }, 1000);
+          }, 3000);
         };
         
         audio.onerror = () => {
@@ -130,25 +128,25 @@ function Home() {
         utterance.lang = language;
       }
       
-      // Faster voice parameters
+      // Smooth and clear voice parameters
       if (language === 'hi-IN') {
-        utterance.rate = 1.3;
+        utterance.rate = 1.1;
         utterance.pitch = 0.95;
         utterance.volume = 1.0;
       } else if (language === 'mr-IN') {
-        utterance.rate = 1.3;
+        utterance.rate = 1.1;
         utterance.pitch = 0.95;
         utterance.volume = 1.0;
       } else if (isExcited) {
-        utterance.rate = 1.4;
+        utterance.rate = 1.15;
         utterance.pitch = 1.1;
         utterance.volume = 0.95;
       } else if (isQuestion) {
-        utterance.rate = 1.3;
+        utterance.rate = 1.1;
         utterance.pitch = 1.05;
         utterance.volume = 0.9;
       } else {
-        utterance.rate = 1.3;
+        utterance.rate = 1.1;
         utterance.pitch = 1.0;
         utterance.volume = 0.9;
       }
@@ -215,9 +213,10 @@ function Home() {
           setIsSpeaking(false);
           isSpeakingRef.current = false;
           if (!isProcessing) {
+            console.log('🎤 Resuming listening after browser TTS');
             setIsWakeWordActive(true);
           }
-        }, 1000);
+        }, 3000);
       };
       
       utterance.onerror = () => {
@@ -255,51 +254,6 @@ function Home() {
       setUserData(null);
       navigate("/signin");
     }
-  }
-
-  // --- Camera Functions ---
-  async function enableCamera() {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-        setCameraActive(true);
-        console.log('📷 Camera enabled');
-      }
-    } catch (err) {
-      console.log('Camera access failed:', err);
-      speak('Camera access denied. Please allow camera permission.');
-    }
-  }
-
-  function disableCamera() {
-    if (videoRef.current && videoRef.current.srcObject) {
-      const tracks = videoRef.current.srcObject.getTracks();
-      tracks.forEach(track => track.stop());
-      videoRef.current.srcObject = null;
-      setCameraActive(false);
-      console.log('📷 Camera disabled');
-    }
-  }
-
-  async function captureAndSearch() {
-    if (!videoRef.current || !canvasRef.current) return;
-    
-    const canvas = canvasRef.current;
-    const ctx = canvas.getContext('2d');
-    canvas.width = videoRef.current.videoWidth;
-    canvas.height = videoRef.current.videoHeight;
-    ctx.drawImage(videoRef.current, 0, 0);
-    
-    canvas.toBlob(async (blob) => {
-      const formData = new FormData();
-      formData.append('image', blob, 'camera-capture.jpg');
-      
-      // Use Google Lens search
-      const searchUrl = 'https://lens.google.com/uploadbyurl?url=';
-      window.open(searchUrl, '_blank');
-      speak('Opening Google Lens for visual search.');
-    });
   }
 
   // --- Screenshot Function ---
@@ -361,18 +315,6 @@ function Home() {
     if (type === "take_screenshot" || type === "screenshot") {
       console.log('📸 Taking screenshot');
       return takeScreenshot();
-    }
-    if (type === "enable_camera" || type === "camera_on") {
-      console.log('📷 Enabling camera');
-      return enableCamera();
-    }
-    if (type === "disable_camera" || type === "camera_off") {
-      console.log('📷 Disabling camera');
-      return disableCamera();
-    }
-    if (type === "visual_search" || type === "search_camera") {
-      console.log('🔍 Visual search');
-      return captureAndSearch();
     }
   }
 
@@ -476,12 +418,12 @@ function Home() {
     setLoading(false);
     setIsProcessing(false);
     
-    // Resume listening after response
+    // Resume listening after response (longer delay)
     setTimeout(() => {
       if (!isSpeaking) {
         setIsWakeWordActive(true);
       }
-    }, 1000);
+    }, 3000);
   }
 
   // --- Enhanced Multi-language Recognition ---
