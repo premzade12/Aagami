@@ -105,6 +105,8 @@ export const askToAssistant = async (req, res) => {
         gemResult = { type: 'open_calculator', response: 'I\'d be happy to open the calculator for you.' };
       } else if (lower.includes('calculator')) {
         gemResult = { type: 'open_calculator', response: 'Of course! I\'ll open the calculator for you.' };
+      } else if (lower.includes('screenshot') || lower.includes('capture screen') || lower.includes('take screenshot')) {
+        gemResult = { type: 'take_screenshot', response: 'Taking a screenshot for you!' };
       } else if (lower.includes('call')) {
         // Extract contact name and phone number from "call [name] on [number]" or "call [name] at [number]"
         let contactInfo = command.replace(/call/gi, '').trim();
@@ -307,6 +309,13 @@ export const askToAssistant = async (req, res) => {
           } catch (e) { /* ignore */ }
         }
         return res.json({ type, response: assistantResponse, action: "open_calculator", audioUrl: calcAudio, language: detectedLanguage });
+      case "take_screenshot":
+        const screenshotResponse = detectedLanguage === 'hi-IN' ? "Screenshot le raha hun!" : "Taking screenshot!";
+        let screenshotAudio = null;
+        try {
+          screenshotAudio = await generateSpeechWithVoice(screenshotResponse, detectedLanguage, detectedLanguage);
+        } catch (e) { /* ignore */ }
+        return res.json({ type, response: screenshotResponse, audioUrl: screenshotAudio || audioUrl, language: detectedLanguage });
       case "whatsapp_message":
         const contact = gemResult.contact || "";
         const message = gemResult.message || "Hi";
