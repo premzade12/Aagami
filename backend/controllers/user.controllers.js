@@ -545,22 +545,19 @@ export const visualSearch = async (req, res) => {
       return res.status(400).json({ error: "No image provided" });
     }
 
-    // Convert image to base64
     const base64Image = req.file.buffer.toString('base64');
-    
-    // Use correct Gemini Vision API endpoint
-    const visionApiUrl = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent";
     const apiKey = process.env.GEMINI_API_KEY;
     
-    const visionPrompt = "Describe what you see in this image in Hindi. Be specific about objects, people, colors, text, and environment.";
+    // Use gemini-pro-vision model for image analysis
+    const visionApiUrl = "https://generativelanguage.googleapis.com/v1beta/models/gemini-pro-vision:generateContent";
     
     const requestPayload = {
       "contents": [{
         "parts": [
-          { "text": visionPrompt },
+          { "text": "इस image में क्या दिख रहा है? Hindi में बताएं।" },
           {
             "inline_data": {
-              "mime_type": req.file.mimetype || "image/jpeg",
+              "mime_type": "image/jpeg",
               "data": base64Image
             }
           }
@@ -570,17 +567,12 @@ export const visualSearch = async (req, res) => {
     
     const result = await axios.post(`${visionApiUrl}?key=${apiKey}`, requestPayload);
     
-    if (result.data?.candidates?.[0]?.content?.parts?.[0]?.text) {
-      const description = result.data.candidates[0].content.parts[0].text;
-      res.json({ description });
-    } else {
-      throw new Error("No valid response from Gemini Vision");
-    }
+    const description = result.data?.candidates?.[0]?.content?.parts?.[0]?.text || "Camera में कुछ दिख रहा है लेकिन पूरी जानकारी नहीं मिल पा रही।";
+    res.json({ description });
     
   } catch (error) {
-    console.error('❌ Visual search error:', error.response?.data || error.message);
-    const fallbackResponse = "Image analyze nahi kar saka. Kuch technical issue hai.";
-    res.json({ description: fallbackResponse });
+    console.error('❌ Vision API Error:', error.response?.status, error.response?.data);
+    res.json({ description: "Camera feed देख रहा हूं लेकिन अभी analyze नहीं कर पा रहा।" });
   }
 };
 
