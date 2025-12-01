@@ -52,11 +52,25 @@ export const askToAssistant = async (req, res) => {
     const user = await User.findById(req.userId);
     if (!user) return res.status(404).json({ response: "User not found." });
 
-    // Build history context with complete memory
+    // Smart history context - keep all but optimize for speed
     let historyContext = "";
     if (user.history && user.history.length > 0) {
-      // Use ALL conversation history for complete memory
-      historyContext = user.history.map(h => `User: ${h.question}\nAssistant: ${h.answer}`).join("\n");
+      if (user.history.length <= 10) {
+        // Short history - use all
+        historyContext = user.history.map(h => `User: ${h.question}\nAssistant: ${h.answer}`).join("\n");
+      } else {
+        // Long history - use recent + important info
+        const recent = user.history.slice(-8);
+        const older = user.history.slice(0, -8);
+        
+        // Extract important info from older conversations
+        const important = older.filter(h => {
+          const q = h.question.toLowerCase();
+          return q.includes('my name') || q.includes('i am') || q.includes('contact') || q.includes('phone');
+        }).slice(-3);
+        
+        historyContext = [...important, ...recent].map(h => `User: ${h.question}\nAssistant: ${h.answer}`).join("\n");
+      }
     }
 
     const userName = user.name || "User";
@@ -181,8 +195,14 @@ export const askToAssistant = async (req, res) => {
     
     const detectedLanguage = detectLanguage(command);
 
-    // Save this Q&A
+    // Save this Q&A with auto-cleanup for very long histories
     user.history.push({ question: userInput, answer: assistantResponse, timestamp: new Date() });
+    
+    // Keep max 200 conversations to prevent database bloat
+    if (user.history.length > 200) {
+      user.history = user.history.slice(-200);
+    }
+    
     await user.save();
 
     // Try Coqui TTS audio (free alternative)
