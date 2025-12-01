@@ -541,10 +541,6 @@ export const setUserVoice = async (req, res) => {
 // ✅ Visual Search with Gemini Vision API
 export const visualSearch = async (req, res) => {
   try {
-    console.log('📷 File upload debug:');
-    console.log('- req.file exists:', !!req.file);
-    console.log('- req.file:', req.file);
-    
     if (!req.file || !req.file.buffer) {
       return res.status(400).json({ error: "No image buffer provided" });
     }
@@ -552,12 +548,13 @@ export const visualSearch = async (req, res) => {
     const base64Image = req.file.buffer.toString('base64');
     const apiKey = process.env.GEMINI_API_KEY;
     
-    const visionApiUrl = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent";
+    // Try gemini-1.5-pro model which has better vision support
+    const visionApiUrl = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro:generateContent";
     
     const requestPayload = {
       "contents": [{
         "parts": [
-          { "text": "इस image में क्या दिख रहा है? Hindi में बताएं।" },
+          { "text": "What do you see in this image? Describe in Hindi." },
           {
             "inline_data": {
               "mime_type": "image/jpeg",
@@ -568,13 +565,16 @@ export const visualSearch = async (req, res) => {
       }]
     };
     
+    console.log('📷 Making vision API call...');
     const result = await axios.post(`${visionApiUrl}?key=${apiKey}`, requestPayload);
-    const description = result.data?.candidates?.[0]?.content?.parts?.[0]?.text || "Camera में कुछ दिख रहा है।";
+    console.log('📷 API response:', result.data);
+    
+    const description = result.data?.candidates?.[0]?.content?.parts?.[0]?.text || "Camera mein kuch dikh raha hai.";
     res.json({ description });
     
   } catch (error) {
-    console.error('❌ Vision Error:', error.message);
-    res.json({ description: "Camera feed देख रहा हूं लेकिन analyze नहीं कर पा रहा।" });
+    console.error('❌ Vision API Error:', error.response?.status, error.response?.data || error.message);
+    res.json({ description: "Camera feed dekh raha hun lekin analyze nahi kar pa raha." });
   }
 };
 
