@@ -308,8 +308,6 @@ function Home() {
         const formData = new FormData();
         formData.append('image', blob, 'camera-capture.jpg');
         
-        speak('Analyzing what I see...');
-        
         const res = await fetch(`${serverUrl}/api/user/visualSearch`, {
           method: 'POST',
           credentials: 'include',
@@ -318,16 +316,16 @@ function Home() {
         
         const data = await res.json();
         if (data.description) {
-          speak(data.description);
+          speak(data.description, null, 'hi-IN');
           setResponse(data.description);
           setAiText(data.description);
           setShowOutput(true);
         } else {
-          speak('I could not analyze the image properly.');
+          speak('Image analyze nahi kar saka.', null, 'hi-IN');
         }
       } catch (err) {
         console.log('Visual search failed:', err);
-        speak('Visual search failed. Please try again.');
+        speak('Visual search fail ho gaya. Phir se try kariye.', null, 'hi-IN');
       }
     });
   }

@@ -540,16 +540,46 @@ export const visualSearch = async (req, res) => {
       return res.status(400).json({ error: "No image provided" });
     }
 
-    // For now, provide a generic response since we don't have vision API setup
-    const responses = [
-      "I can see the camera feed is active. The visual search feature is working, but I need a vision-enabled AI model to analyze images in detail.",
-      "The camera is capturing the scene. To provide detailed visual analysis, I would need access to a computer vision service.",
-      "I can detect that an image was captured from your camera. For specific object recognition, I would need additional AI vision capabilities."
-    ];
+    // Convert image to base64 for Gemini Vision API
+    const imageBuffer = req.file.buffer;
+    const base64Image = imageBuffer.toString('base64');
     
-    const randomResponse = responses[Math.floor(Math.random() * responses.length)];
+    try {
+      // Use Gemini Vision API
+      const visionPrompt = "Describe what you see in this image in Hindi. Include objects, people, colors, and any text you can read. Be specific and detailed.";
+      
+      const apiUrl = process.env.GEMINI_API_URL;
+      const apiKey = process.env.GEMINI_API_KEY;
+      
+      const result = await axios.post(`${apiUrl}?key=${apiKey}`, {
+        "contents": [{
+          "parts": [
+            { "text": visionPrompt },
+            {
+              "inline_data": {
+                "mime_type": "image/jpeg",
+                "data": base64Image
+              }
+            }
+          ]
+        }]
+      });
+      
+      if (result.data?.candidates?.[0]?.content?.parts?.[0]?.text) {
+        const description = result.data.candidates[0].content.parts[0].text;
+        res.json({ description });
+      } else {
+        throw new Error("No valid response from vision API");
+      }
+      
+    } catch (visionError) {
+      console.error("❌ Vision API failed:", visionError.message);
+      
+      // Fallback to generic Hindi response
+      const fallbackResponse = "Main camera mein kuch dekh raha hun lekin detailed analysis nahi kar pa raha. Vision AI service ki zarurat hai.";
+      res.json({ description: fallbackResponse });
+    }
     
-    res.json({ description: randomResponse });
   } catch (error) {
     console.error("❌ Visual search error:", error);
     res.status(500).json({ error: "Visual search failed" });
