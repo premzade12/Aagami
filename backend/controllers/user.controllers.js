@@ -7,6 +7,12 @@ import moment from "moment";
 import geminiCorrectCode from "../geminiCorrectCode.js";
 import axios from "axios";
 import { generateSpeechWithVoice, getAvailableVoices } from "../services/voiceManager.js";
+import { GoogleAuth } from 'google-auth-library';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const YOUTUBE_API_KEY = process.env.YOUTUBE_API_KEY;
 
@@ -533,28 +539,88 @@ export const setUserVoice = async (req, res) => {
   }
 };
 
-// ✅ Visual Search with AI
+// ✅ Visual Search with Google Vision API
 export const visualSearch = async (req, res) => {
   try {
     if (!req.file) {
       return res.status(400).json({ error: "No image provided" });
     }
 
-    // Simulate realistic camera analysis responses in Hindi
-    const realisticResponses = [
-      "Main camera mein ek vyakti ko dekh raha hun jo computer ke samne baitha hai. Background mein kuch furniture aur lighting dikh rahi hai.",
-      "Camera mein ek room dikh raha hai jismein table, chair aur kuch electronic devices hain. Lighting natural lag rahi hai.",
-      "Main dekh raha hun ki camera ke samne koi vyakti hai. Unke peeche wall aur kuch ghar ka samaan dikh raha hai.",
-      "Camera feed mein indoor environment dikh raha hai. Kuch furniture, possibly ek desk aur chair, aur background mein room ki details hain.",
-      "Main camera mein human presence detect kar raha hun. Background mein typical home/office setup dikh raha hai."
-    ];
+    // Convert image to base64
+    const imageBuffer = req.file.buffer;
+    const base64Image = imageBuffer.toString('base64');
     
-    // Add some delay to simulate processing
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    try {
+      // Use Google Vision API with service account authentication
+      const auth = new GoogleAuth({
+        keyFile: path.join(__dirname, '..', 'aagami-a39e37a38560.json'),
+        scopes: ['https://www.googleapis.com/auth/cloud-platform']
+      });
+      
+      const authClient = await auth.getClient();
+      const accessToken = await authClient.getAccessToken();
+      
+      const visionResponse = await axios.post(
+        'https://vision.googleapis.com/v1/images:annotate',
+        {
+          requests: [{
+            image: { content: base64Image },
+            features: [
+              { type: 'LABEL_DETECTION', maxResults: 10 },
+              { type: 'OBJECT_LOCALIZATION', maxResults: 10 },
+              { type: 'TEXT_DETECTION', maxResults: 5 },
+              { type: 'FACE_DETECTION', maxResults: 5 }
+            ]
+          }]
+        },
+        {
+          headers: {
+            'Authorization': `Bearer ${accessToken.token}`,
+            'Content-Type': 'application/json'
+          }
+        }
+      );
+
+      const annotations = visionResponse.data.responses[0];
+      let description = "Main camera mein dekh raha hun: ";
+      
+      // Process labels (objects/things detected)
+      if (annotations.labelAnnotations && annotations.labelAnnotations.length > 0) {
+        const labels = annotations.labelAnnotations.slice(0, 5).map(label => label.description);
+        description += labels.join(", ") + ". ";
+      }
+      
+      // Process faces
+      if (annotations.faceAnnotations && annotations.faceAnnotations.length > 0) {
+        const faceCount = annotations.faceAnnotations.length;
+        description += `${faceCount} vyakti dikh rahe hain. `;
+      }
+      
+      // Process text
+      if (annotations.textAnnotations && annotations.textAnnotations.length > 0) {
+        description += "Kuch text bhi dikh raha hai. ";
+      }
+      
+      // Process objects
+      if (annotations.localizedObjectAnnotations && annotations.localizedObjectAnnotations.length > 0) {
+        const objects = annotations.localizedObjectAnnotations.slice(0, 3).map(obj => obj.name);
+        description += "Objects: " + objects.join(", ") + ". ";
+      }
+      
+      if (description === "Main camera mein dekh raha hun: ") {
+        description = "Camera mein kuch basic scene dikh raha hai lekin specific details clear nahi hain.";
+      }
+      
+      res.json({ description });
+      
+    } catch (visionError) {
+      console.error("❌ Google Vision API failed:", visionError.message);
+      
+      // Fallback response
+      const fallbackResponse = "Main camera dekh raha hun lekin abhi detailed analysis nahi kar pa raha. Vision service ki zarurat hai.";
+      res.json({ description: fallbackResponse });
+    }
     
-    const randomResponse = realisticResponses[Math.floor(Math.random() * realisticResponses.length)];
-    
-    res.json({ description: randomResponse });
   } catch (error) {
     console.error("❌ Visual search error:", error);
     res.status(500).json({ error: "Visual search failed" });
