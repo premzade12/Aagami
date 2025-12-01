@@ -12,7 +12,7 @@ import {
   visualSearch       // ✅ visual search controller
 } from "../controllers/user.controllers.js";
 import isAuth from "../middlewares/isAuth.js";
-import upload from "../middlewares/multer.js";
+import upload, { memoryUpload } from "../middlewares/multer.js";
 
 const userRouter = express.Router();
 
@@ -34,6 +34,6 @@ userRouter.get("/voices", getVoices);                  // Get available voices
 userRouter.post("/set-voice", isAuth, setUserVoice);   // Set user voice
 
 // ✅ Visual search route
-userRouter.post("/visualSearch", isAuth, upload.single("image"), visualSearch);
+userRouter.post("/visualSearch", isAuth, memoryUpload.single("image"), visualSearch);
 
 export default userRouter;

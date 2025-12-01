@@ -10,4 +10,9 @@ const storage = multer.diskStorage({
 })
 
 const upload = multer({storage});
+
+// Memory storage for visual search
+const memoryUpload = multer({ storage: multer.memoryStorage() });
+
+export { memoryUpload };
 export default upload;
