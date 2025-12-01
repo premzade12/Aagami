@@ -68,13 +68,16 @@ export const askToAssistant = async (req, res) => {
     
     try {
       result = await geminiResponse(`${historyContext}\nUser: ${command}`, assistantName, userName);
+      console.log('🤖 Gemini raw response:', result);
       
       // Parse Gemini response
       const jsonMatch = result.match(/```json([\s\S]*?)```|({[\s\S]*})/);
       if (jsonMatch) {
         const jsonString = jsonMatch[1] || jsonMatch[2];
         gemResult = JSON.parse(jsonString);
+        console.log('🤖 Gemini parsed result:', gemResult);
       } else {
+        console.log('🤖 Gemini response not JSON, treating as general');
         gemResult = { type: "general", userInput: command, response: result };
       }
     } catch (err) {
@@ -82,6 +85,7 @@ export const askToAssistant = async (req, res) => {
       
       // Fallback system
       const lower = command.toLowerCase();
+      console.log('🔍 Fallback processing command:', lower);
       if (lower.includes('search') && (lower.includes('google') || lower.includes('on google'))) {
         const assistantNameRegex = new RegExp(assistantName, 'gi');
         let searchTerm = command.replace(assistantNameRegex, '').replace(/search|google|on google|for/gi, '').trim();
@@ -107,11 +111,11 @@ export const askToAssistant = async (req, res) => {
         gemResult = { type: 'open_calculator', response: 'Of course! I\'ll open the calculator for you.' };
       } else if (lower.includes('screenshot') || lower.includes('capture screen') || lower.includes('take screenshot')) {
         gemResult = { type: 'take_screenshot', response: 'Taking a screenshot for you!' };
-      } else if (lower.includes('enable camera') || lower.includes('camera on') || lower.includes('turn on camera')) {
+      } else if (lower.includes('enable') && lower.includes('camera') || lower.includes('camera on') || lower.includes('turn on camera') || lower.includes('start camera')) {
         gemResult = { type: 'enable_camera', response: 'Enabling camera for you!' };
-      } else if (lower.includes('disable camera') || lower.includes('camera off') || lower.includes('turn off camera')) {
+      } else if (lower.includes('disable') && lower.includes('camera') || lower.includes('camera off') || lower.includes('turn off camera') || lower.includes('stop camera')) {
         gemResult = { type: 'disable_camera', response: 'Disabling camera!' };
-      } else if (lower.includes('search camera') || lower.includes('visual search') || lower.includes('search what i see')) {
+      } else if (lower.includes('search camera') || lower.includes('visual search') || lower.includes('search what i see') || lower.includes('identify this')) {
         gemResult = { type: 'visual_search', response: 'Searching what you see!' };
       } else if (lower.includes('call')) {
         // Extract contact name and phone number from "call [name] on [number]" or "call [name] at [number]"
