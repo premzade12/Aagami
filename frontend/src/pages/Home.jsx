@@ -774,7 +774,7 @@ function Home() {
         )}
 
         {!aiText && !loading && (
-          <img src={userImg} className="w-[300px]" alt="User listening" />assName="w-[300px]" alt="User listening" />
+          <img src={userImg} className="w-[300px]" alt="User listening" />
         )}
         {(aiText || loading) && (
           <img src={aiImg} className="w-[300px]" alt="AI speaking" />
