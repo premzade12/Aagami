@@ -538,99 +538,56 @@ export const setUserVoice = async (req, res) => {
   }
 };
 
-// ✅ Visual Search with Google Vision API
+// ✅ Visual Search with Gemini Vision API
 export const visualSearch = async (req, res) => {
   try {
+    console.log('📷 Visual search request received');
+    
     if (!req.file) {
+      console.log('❌ No image file provided');
       return res.status(400).json({ error: "No image provided" });
     }
 
+    console.log('📷 Image received, size:', req.file.size);
+    
     // Convert image to base64
     const imageBuffer = req.file.buffer;
     const base64Image = imageBuffer.toString('base64');
     
     try {
-      // Use Google Vision API with service account from environment variables
-      const credentials = {
-        type: "service_account",
-        project_id: process.env.GOOGLE_PROJECT_ID,
-        private_key_id: process.env.GOOGLE_PRIVATE_KEY_ID,
-        private_key: process.env.GOOGLE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
-        client_email: process.env.GOOGLE_CLIENT_EMAIL,
-        client_id: process.env.GOOGLE_CLIENT_ID,
-        auth_uri: "https://accounts.google.com/o/oauth2/auth",
-        token_uri: "https://oauth2.googleapis.com/token",
-        auth_provider_x509_cert_url: "https://www.googleapis.com/oauth2/v1/certs",
-        client_x509_cert_url: process.env.GOOGLE_CLIENT_CERT_URL
-      };
+      // Use Gemini Vision API for actual image analysis
+      const apiUrl = process.env.GEMINI_API_URL.replace('generateContent', 'generateContent');
+      const apiKey = process.env.GEMINI_API_KEY;
       
-      const auth = new GoogleAuth({
-        credentials,
-        scopes: ['https://www.googleapis.com/auth/cloud-platform']
+      const visionPrompt = "Describe what you see in this image in Hindi. Be specific about objects, people, colors, text, and environment. Give a natural description as if you're looking through a camera.";
+      
+      const result = await axios.post(`${apiUrl}?key=${apiKey}`, {
+        "contents": [{
+          "parts": [
+            { "text": visionPrompt },
+            {
+              "inline_data": {
+                "mime_type": "image/jpeg",
+                "data": base64Image
+              }
+            }
+          ]
+        }]
       });
       
-      const authClient = await auth.getClient();
-      const accessToken = await authClient.getAccessToken();
-      
-      const visionResponse = await axios.post(
-        'https://vision.googleapis.com/v1/images:annotate',
-        {
-          requests: [{
-            image: { content: base64Image },
-            features: [
-              { type: 'LABEL_DETECTION', maxResults: 10 },
-              { type: 'OBJECT_LOCALIZATION', maxResults: 10 },
-              { type: 'TEXT_DETECTION', maxResults: 5 },
-              { type: 'FACE_DETECTION', maxResults: 5 }
-            ]
-          }]
-        },
-        {
-          headers: {
-            'Authorization': `Bearer ${accessToken.token}`,
-            'Content-Type': 'application/json'
-          }
-        }
-      );
-
-      const annotations = visionResponse.data.responses[0];
-      let description = "Main camera mein dekh raha hun: ";
-      
-      // Process labels (objects/things detected)
-      if (annotations.labelAnnotations && annotations.labelAnnotations.length > 0) {
-        const labels = annotations.labelAnnotations.slice(0, 5).map(label => label.description);
-        description += labels.join(", ") + ". ";
+      if (result.data?.candidates?.[0]?.content?.parts?.[0]?.text) {
+        const description = result.data.candidates[0].content.parts[0].text;
+        console.log('📷 Gemini Vision analysis:', description.substring(0, 100) + '...');
+        res.json({ description });
+      } else {
+        throw new Error("No valid response from Gemini Vision");
       }
-      
-      // Process faces
-      if (annotations.faceAnnotations && annotations.faceAnnotations.length > 0) {
-        const faceCount = annotations.faceAnnotations.length;
-        description += `${faceCount} vyakti dikh rahe hain. `;
-      }
-      
-      // Process text
-      if (annotations.textAnnotations && annotations.textAnnotations.length > 0) {
-        description += "Kuch text bhi dikh raha hai. ";
-      }
-      
-      // Process objects
-      if (annotations.localizedObjectAnnotations && annotations.localizedObjectAnnotations.length > 0) {
-        const objects = annotations.localizedObjectAnnotations.slice(0, 3).map(obj => obj.name);
-        description += "Objects: " + objects.join(", ") + ". ";
-      }
-      
-      if (description === "Main camera mein dekh raha hun: ") {
-        description = "Camera mein kuch basic scene dikh raha hai lekin specific details clear nahi hain.";
-      }
-      
-      res.json({ description });
       
     } catch (visionError) {
-      console.error("❌ Google Vision API failed:", visionError.message);
-      console.error("❌ Full error:", visionError.response?.data || visionError);
+      console.error("❌ Gemini Vision failed:", visionError.message);
       
-      // Better fallback response explaining the issue
-      const fallbackResponse = "Main camera feed dekh raha hun. Google Vision API abhi setup nahi hai properly, isliye detailed analysis nahi kar pa raha. Lekin camera working hai!";
+      // Fallback response
+      const fallbackResponse = "Main camera feed dekh raha hun lekin abhi detailed analysis nahi kar pa raha. Vision API setup ki zarurat hai.";
       res.json({ description: fallbackResponse });
     }
     
