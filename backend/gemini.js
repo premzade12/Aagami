@@ -44,7 +44,7 @@ Your task is to understand the user's natural language commands and return a str
 {
   "type": "correct_code" | "general" | "google_search" | "youtube_search" | "play_youtube" | "youtube_close" | "sing_song" |
           "get_time" | "get_date" | "get_day" | "get_month" | "calculator_open" | "whatsapp_message" | "whatsapp_call" | "change_voice" |
-          "open_instagram" | "open_whatsapp" | "facebook_open" | "weather-show" | "take_screenshot",
+          "open_instagram" | "open_whatsapp" | "facebook_open" | "weather-show" | "take_screenshot" | "enable_camera" | "disable_camera" | "visual_search",
 
   "userInput": "<original user input, with assistant name removed if present>",
   "response": "<a short spoken response for the user>",
@@ -69,6 +69,9 @@ Instructions:
   - "open_instagram": If user says "open Instagram" or "launch Instagram".
   - "open_whatsapp": If user says "open WhatsApp" or "launch WhatsApp".
   - "take_screenshot": If user says "take screenshot", "capture screen", "screenshot", or "save screen".
+  - "enable_camera": If user says "enable camera", "camera on", "turn on camera", or "start camera".
+  - "disable_camera": If user says "disable camera", "camera off", "turn off camera", or "stop camera".
+  - "visual_search": If user says "search camera", "visual search", "search what I see", or "identify this".
   - "facebook_open", "weather-show" → as named.
   - "get_time", "get_date", "get_day", "get_month" → for basic queries.
 

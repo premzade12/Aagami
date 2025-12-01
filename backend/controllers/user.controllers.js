@@ -107,6 +107,12 @@ export const askToAssistant = async (req, res) => {
         gemResult = { type: 'open_calculator', response: 'Of course! I\'ll open the calculator for you.' };
       } else if (lower.includes('screenshot') || lower.includes('capture screen') || lower.includes('take screenshot')) {
         gemResult = { type: 'take_screenshot', response: 'Taking a screenshot for you!' };
+      } else if (lower.includes('enable camera') || lower.includes('camera on') || lower.includes('turn on camera')) {
+        gemResult = { type: 'enable_camera', response: 'Enabling camera for you!' };
+      } else if (lower.includes('disable camera') || lower.includes('camera off') || lower.includes('turn off camera')) {
+        gemResult = { type: 'disable_camera', response: 'Disabling camera!' };
+      } else if (lower.includes('search camera') || lower.includes('visual search') || lower.includes('search what i see')) {
+        gemResult = { type: 'visual_search', response: 'Searching what you see!' };
       } else if (lower.includes('call')) {
         // Extract contact name and phone number from "call [name] on [number]" or "call [name] at [number]"
         let contactInfo = command.replace(/call/gi, '').trim();
@@ -316,6 +322,15 @@ export const askToAssistant = async (req, res) => {
           screenshotAudio = await generateSpeechWithVoice(screenshotResponse, detectedLanguage, detectedLanguage);
         } catch (e) { /* ignore */ }
         return res.json({ type, response: screenshotResponse, audioUrl: screenshotAudio || audioUrl, language: detectedLanguage });
+      case "enable_camera":
+        const cameraOnResponse = detectedLanguage === 'hi-IN' ? "Camera on kar raha hun!" : "Enabling camera!";
+        return res.json({ type, response: cameraOnResponse, audioUrl, language: detectedLanguage });
+      case "disable_camera":
+        const cameraOffResponse = detectedLanguage === 'hi-IN' ? "Camera off kar raha hun!" : "Disabling camera!";
+        return res.json({ type, response: cameraOffResponse, audioUrl, language: detectedLanguage });
+      case "visual_search":
+        const searchResponse = detectedLanguage === 'hi-IN' ? "Visual search kar raha hun!" : "Searching what you see!";
+        return res.json({ type, response: searchResponse, audioUrl, language: detectedLanguage });
       case "whatsapp_message":
         const contact = gemResult.contact || "";
         const message = gemResult.message || "Hi";
