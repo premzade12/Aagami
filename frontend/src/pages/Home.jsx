@@ -401,8 +401,8 @@ function Home() {
       console.log('📷 Disabling camera');
       return disableCamera();
     }
-    if (type === "visual_search" || type === "search_camera") {
-      console.log('🔍 Visual search');
+    if (type === "visual_search" || type === "search_camera" || action === "capture_and_search") {
+      console.log('🔍 Visual search - capturing and analyzing');
       return captureAndSearch();
     }
     

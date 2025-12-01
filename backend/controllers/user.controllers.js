@@ -353,8 +353,9 @@ export const askToAssistant = async (req, res) => {
         const cameraOffResponse = detectedLanguage === 'hi-IN' ? "Camera off kar raha hun!" : "Disabling camera!";
         return res.json({ type, response: cameraOffResponse, audioUrl, language: detectedLanguage });
       case "visual_search":
-        const visualSearchResponse = detectedLanguage === 'hi-IN' ? "Visual search kar raha hun!" : "Searching what you see!";
-        return res.json({ type, response: visualSearchResponse, audioUrl, language: detectedLanguage });
+        // For visual search, we need to trigger the actual camera capture and analysis
+        const visualSearchResponse = detectedLanguage === 'hi-IN' ? "Camera se dekh raha hun..." : "Analyzing camera feed...";
+        return res.json({ type, response: visualSearchResponse, audioUrl, language: detectedLanguage, action: "capture_and_search" });
       case "whatsapp_message":
         const contact = gemResult.contact || "";
         const message = gemResult.message || "Hi";
