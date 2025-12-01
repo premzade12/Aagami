@@ -221,25 +221,23 @@ function Home() {
       
       utterance.onerror = () => {
         console.log('🔊 Browser TTS error, resuming listening');
-        setTimeout(() => {
-          setIsSpeaking(false);
-          if (!isProcessing) {
-            setIsWakeWordActive(true);
-          }
-        }, 3000);
+        setIsSpeaking(false);
+        isSpeakingRef.current = false;
+        if (!isProcessing) {
+          setIsWakeWordActive(true);
+        }
       };
       
       synth.speak(utterance);
     } catch (e) {
       console.log('Browser TTS failed:', e);
       // Resume listening even if TTS fails
-      setTimeout(() => {
-        console.log('🔊 TTS failed, resuming listening after delay');
-        setIsSpeaking(false);
-        if (!isProcessing) {
-          setIsWakeWordActive(true);
-        }
-      }, 5000); // Reasonable delay for failures
+      console.log('🔊 TTS failed, resuming listening immediately');
+      setIsSpeaking(false);
+      isSpeakingRef.current = false;
+      if (!isProcessing) {
+        setIsWakeWordActive(true);
+      }
     }
     } // Close useBrowserTTS function
   }
