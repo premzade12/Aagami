@@ -264,17 +264,20 @@ function Home() {
       const stream = await navigator.mediaDevices.getUserMedia({ video: true });
       console.log('📷 Camera stream obtained:', stream);
       
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-        setCameraActive(true); // Set immediately
-        console.log('📷 Camera UI activated');
-        
-        videoRef.current.onloadedmetadata = () => {
-          console.log('📷 Video metadata loaded');
-        };
-      } else {
-        console.log('⚠️ Video ref not available');
-      }
+      // Set camera active first to render the video element
+      setCameraActive(true);
+      console.log('📷 Camera UI activated');
+      
+      // Wait for next render cycle, then set the stream
+      setTimeout(() => {
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream;
+          console.log('📷 Stream assigned to video element');
+        } else {
+          console.log('⚠️ Video ref still not available after render');
+        }
+      }, 100);
+      
     } catch (err) {
       console.log('❌ Camera access failed:', err);
       speak('Camera access denied. Please allow camera permission.');
