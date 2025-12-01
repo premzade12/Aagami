@@ -748,30 +748,7 @@ function Home() {
           }
         </p>
         
-        {/* Camera View */}
-        {cameraActive && (
-          <div className="mt-4 relative">
-            <video
-              ref={videoRef}
-              autoPlay
-              playsInline
-              className="w-[200px] h-[150px] rounded-lg border border-blue-500"
-            />
-            <canvas ref={canvasRef} style={{ display: 'none' }} />
-            <button
-              onClick={disableCamera}
-              className="absolute top-2 right-2 bg-red-500 text-white px-2 py-1 text-xs rounded"
-            >
-              Close
-            </button>
-            <button
-              onClick={captureAndSearch}
-              className="absolute bottom-2 left-1/2 transform -translate-x-1/2 bg-blue-500 text-white px-3 py-1 text-sm rounded"
-            >
-              Search
-            </button>
-          </div>
-        )}
+
 
         {!aiText && !loading && (
           <img src={userImg} className="w-[300px]" alt="User listening" />
@@ -783,6 +760,31 @@ function Home() {
 
       {/* Left Input Panel */}
       <div className="absolute left-[30px] w-[30%] flex-col items-start gap-4 sm:flex hidden md:w-[20%]">
+        {/* Camera View */}
+        {cameraActive && (
+          <div className="relative w-full aspect-square bg-black border border-blue-500 rounded-md overflow-hidden">
+            <video
+              ref={videoRef}
+              autoPlay
+              playsInline
+              className="w-full h-full object-cover"
+            />
+            <canvas ref={canvasRef} style={{ display: 'none' }} />
+            <button
+              onClick={disableCamera}
+              className="absolute top-2 right-2 bg-red-500 text-white px-2 py-1 text-xs rounded hover:bg-red-600 transition"
+            >
+              ✕
+            </button>
+            <button
+              onClick={captureAndSearch}
+              className="absolute bottom-2 left-1/2 transform -translate-x-1/2 bg-blue-500 text-white px-3 py-1 text-sm rounded hover:bg-blue-600 transition"
+            >
+              🔍 Search
+            </button>
+          </div>
+        )}
+        
         <textarea
           ref={inputRef}
           value={input}
@@ -791,7 +793,7 @@ function Home() {
             inputValue.current = e.target.value;
           }}
           placeholder={isAssistantAwake ? "Type your command..." : "Type 'wake up' to wake assistant..."}
-          rows={10}
+          rows={cameraActive ? 6 : 10}
           className="p-4 w-full bg-black border border-blue-500 rounded-md text-white resize-none focus:outline-none focus:ring-2 focus:ring-blue-400 shadow"
         />
         <div className="flex gap-2">
