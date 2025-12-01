@@ -333,8 +333,8 @@ export const askToAssistant = async (req, res) => {
         const cameraOffResponse = detectedLanguage === 'hi-IN' ? "Camera off kar raha hun!" : "Disabling camera!";
         return res.json({ type, response: cameraOffResponse, audioUrl, language: detectedLanguage });
       case "visual_search":
-        const searchResponse = detectedLanguage === 'hi-IN' ? "Visual search kar raha hun!" : "Searching what you see!";
-        return res.json({ type, response: searchResponse, audioUrl, language: detectedLanguage });
+        const visualSearchResponse = detectedLanguage === 'hi-IN' ? "Visual search kar raha hun!" : "Searching what you see!";
+        return res.json({ type, response: visualSearchResponse, audioUrl, language: detectedLanguage });
       case "whatsapp_message":
         const contact = gemResult.contact || "";
         const message = gemResult.message || "Hi";
