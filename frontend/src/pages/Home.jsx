@@ -260,14 +260,22 @@ function Home() {
   // --- Camera Functions ---
   async function enableCamera() {
     try {
+      console.log('📷 Requesting camera access...');
       const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+      console.log('📷 Camera stream obtained:', stream);
+      
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
-        setCameraActive(true);
-        console.log('📷 Camera enabled');
+        videoRef.current.onloadedmetadata = () => {
+          console.log('📷 Video metadata loaded');
+          setCameraActive(true);
+        };
+        console.log('📷 Camera enabled successfully');
+      } else {
+        console.log('⚠️ Video ref not available');
       }
     } catch (err) {
-      console.log('Camera access failed:', err);
+      console.log('❌ Camera access failed:', err);
       speak('Camera access denied. Please allow camera permission.');
     }
   }
