@@ -256,6 +256,37 @@ function Home() {
     }
   }
 
+  // --- Screenshot Function ---
+  async function takeScreenshot() {
+    try {
+      const stream = await navigator.mediaDevices.getDisplayMedia({ video: true });
+      const video = document.createElement('video');
+      video.srcObject = stream;
+      video.play();
+      
+      video.addEventListener('loadedmetadata', () => {
+        const canvas = document.createElement('canvas');
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(video, 0, 0);
+        
+        canvas.toBlob((blob) => {
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `screenshot-${new Date().toISOString().slice(0, 19).replace(/:/g, '-')}.png`;
+          a.click();
+          URL.revokeObjectURL(url);
+        });
+        
+        stream.getTracks().forEach(track => track.stop());
+      });
+    } catch (err) {
+      console.log('Screenshot failed:', err);
+    }
+  }
+
   // --- Handle command actions ---
   async function handleCommand(data) {
     const { type, action, url, userInput, query } = data;
@@ -280,6 +311,10 @@ function Home() {
     if (type === "open_calculator" || type === "calculator_open" || action === "open_calculator") {
       console.log('📊 Opening Calculator');
       return window.open("https://www.google.com/search?q=calculator", "_blank");
+    }
+    if (type === "take_screenshot" || type === "screenshot") {
+      console.log('📸 Taking screenshot');
+      return takeScreenshot();
     }
   }
 

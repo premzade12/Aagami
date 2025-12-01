@@ -44,7 +44,7 @@ Your task is to understand the user's natural language commands and return a str
 {
   "type": "correct_code" | "general" | "google_search" | "youtube_search" | "play_youtube" | "youtube_close" | "sing_song" |
           "get_time" | "get_date" | "get_day" | "get_month" | "calculator_open" | "whatsapp_message" | "whatsapp_call" | "change_voice" |
-          "open_instagram" | "open_whatsapp" | "facebook_open" | "weather-show",
+          "open_instagram" | "open_whatsapp" | "facebook_open" | "weather-show" | "take_screenshot",
 
   "userInput": "<original user input, with assistant name removed if present>",
   "response": "<a short spoken response for the user>",
@@ -68,6 +68,7 @@ Instructions:
     Example: {"type": "whatsapp_call", "contact": "John", "phone": "1234567890", "response": "Calling John on WhatsApp"}
   - "open_instagram": If user says "open Instagram" or "launch Instagram".
   - "open_whatsapp": If user says "open WhatsApp" or "launch WhatsApp".
+  - "take_screenshot": If user says "take screenshot", "capture screen", "screenshot", or "save screen".
   - "facebook_open", "weather-show" → as named.
   - "get_time", "get_date", "get_day", "get_month" → for basic queries.
 
