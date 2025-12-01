@@ -7,7 +7,7 @@ import moment from "moment";
 import geminiCorrectCode from "../geminiCorrectCode.js";
 import axios from "axios";
 import { generateSpeechWithVoice, getAvailableVoices } from "../services/voiceManager.js";
-import { GoogleAuth } from 'google-auth-library';
+
 
 const YOUTUBE_API_KEY = process.env.YOUTUBE_API_KEY;
 
@@ -538,89 +538,49 @@ export const setUserVoice = async (req, res) => {
   }
 };
 
-// ✅ Visual Search with Debug Logging
+// ✅ Visual Search with Gemini Vision API
 export const visualSearch = async (req, res) => {
   try {
-    console.log('📷 === VISUAL SEARCH DEBUG START ===');
-    console.log('📷 Request method:', req.method);
-    console.log('📷 Request headers:', JSON.stringify(req.headers, null, 2));
-    console.log('📷 Request body keys:', Object.keys(req.body || {}));
-    console.log('📷 Request file:', req.file ? 'Present' : 'Missing');
-    
     if (!req.file) {
-      console.log('❌ ERROR: No image file provided');
-      console.log('📷 Available req properties:', Object.keys(req));
       return res.status(400).json({ error: "No image provided" });
     }
 
-    console.log('📷 Image details:');
-    console.log('  - Size:', req.file.size);
-    console.log('  - Mimetype:', req.file.mimetype);
-    console.log('  - Fieldname:', req.file.fieldname);
-    console.log('  - Buffer length:', req.file.buffer?.length);
-    
     // Convert image to base64
-    const imageBuffer = req.file.buffer;
-    const base64Image = imageBuffer.toString('base64');
-    console.log('📷 Base64 conversion successful, length:', base64Image.length);
+    const base64Image = req.file.buffer.toString('base64');
     
-    try {
-      // Use Gemini Vision API for actual image analysis
-      const apiUrl = process.env.GEMINI_API_URL;
-      const apiKey = process.env.GEMINI_API_KEY;
-      
-      console.log('📷 API URL:', apiUrl);
-      console.log('📷 API Key exists:', !!apiKey);
-      
-      const visionPrompt = "Describe what you see in this image in Hindi. Be specific about objects, people, colors, text, and environment.";
-      
-      const requestPayload = {
-        "contents": [{
-          "parts": [
-            { "text": visionPrompt },
-            {
-              "inline_data": {
-                "mime_type": "image/jpeg",
-                "data": base64Image
-              }
+    // Use correct Gemini Vision API endpoint
+    const visionApiUrl = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent";
+    const apiKey = process.env.GEMINI_API_KEY;
+    
+    const visionPrompt = "Describe what you see in this image in Hindi. Be specific about objects, people, colors, text, and environment.";
+    
+    const requestPayload = {
+      "contents": [{
+        "parts": [
+          { "text": visionPrompt },
+          {
+            "inline_data": {
+              "mime_type": req.file.mimetype || "image/jpeg",
+              "data": base64Image
             }
-          ]
-        }]
-      };
-      
-      console.log('📷 Making Gemini Vision API call...');
-      const result = await axios.post(`${apiUrl}?key=${apiKey}`, requestPayload);
-      
-      console.log('📷 Gemini API response status:', result.status);
-      console.log('📷 Gemini API response data:', JSON.stringify(result.data, null, 2));
-      
-      if (result.data?.candidates?.[0]?.content?.parts?.[0]?.text) {
-        const description = result.data.candidates[0].content.parts[0].text;
-        console.log('📷 SUCCESS: Vision analysis complete');
-        console.log('📷 Description:', description);
-        res.json({ description });
-      } else {
-        console.log('❌ ERROR: No valid response structure from Gemini Vision');
-        throw new Error("No valid response from Gemini Vision");
-      }
-      
-    } catch (visionError) {
-      console.log('❌ VISION API ERROR:');
-      console.log('  - Message:', visionError.message);
-      console.log('  - Status:', visionError.response?.status);
-      console.log('  - Data:', JSON.stringify(visionError.response?.data, null, 2));
-      
-      // Fallback response
-      const fallbackResponse = "Main camera feed dekh raha hun lekin abhi detailed analysis nahi kar pa raha. Vision API mein issue hai.";
-      res.json({ description: fallbackResponse });
+          }
+        ]
+      }]
+    };
+    
+    const result = await axios.post(`${visionApiUrl}?key=${apiKey}`, requestPayload);
+    
+    if (result.data?.candidates?.[0]?.content?.parts?.[0]?.text) {
+      const description = result.data.candidates[0].content.parts[0].text;
+      res.json({ description });
+    } else {
+      throw new Error("No valid response from Gemini Vision");
     }
     
   } catch (error) {
-    console.log('❌ GENERAL ERROR:');
-    console.log('  - Message:', error.message);
-    console.log('  - Stack:', error.stack);
-    console.log('📷 === VISUAL SEARCH DEBUG END ===');
-    res.status(500).json({ error: "Visual search failed" });
+    console.error('❌ Visual search error:', error.response?.data || error.message);
+    const fallbackResponse = "Image analyze nahi kar saka. Kuch technical issue hai.";
+    res.json({ description: fallbackResponse });
   }
 };
 
