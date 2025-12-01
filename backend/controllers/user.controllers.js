@@ -548,8 +548,8 @@ export const visualSearch = async (req, res) => {
     const base64Image = req.file.buffer.toString('base64');
     const apiKey = process.env.GEMINI_API_KEY;
     
-    // Try gemini-1.5-pro model which has better vision support
-    const visionApiUrl = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro:generateContent";
+    // Use gemini-1.5-flash which supports vision
+    const visionApiUrl = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent";
     
     const requestPayload = {
       "contents": [{
