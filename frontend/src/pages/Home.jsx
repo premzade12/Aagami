@@ -496,6 +496,7 @@ function Home() {
           setIsAssistantAwake(true);
           isAssistantAwakeRef.current = true;
           setIsWakeWordActive(false);
+          setIsProcessing(false);
           stopListening();
           speak(`Good day! I'm ${userData?.assistantName}, and I'm at your service.`);
           setTimeout(() => {
@@ -519,6 +520,7 @@ function Home() {
             }, 1000);
           } else {
             speak(`Good day! I'm ${userData?.assistantName}, at your service.`);
+            setIsProcessing(false);
             setTimeout(() => {
               setIsWakeWordActive(true);
             }, 2000);
