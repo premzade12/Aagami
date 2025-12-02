@@ -3,6 +3,7 @@ import dotenv from "dotenv";
 dotenv.config(); 
 
 const geminiResponse = async (command, assistantName, userName) => {
+  console.log('🚀 Gemini function called with:', { command: command.substring(0, 100) + '...', assistantName, userName });
   const prompt = `
 You are a smart female AI assistant named ${assistantName}, created by Prem Zade.
 You have access to conversation history and can remember personal information shared by the user.
@@ -92,19 +93,22 @@ Instructions:
   - Set "userInput" to an empty string "".
   - The actual code will be handled separately in the frontend.
 - For SELF-INTRODUCTION commands ("tell me about you", "who are you", "introduce yourself"):
-  - ALWAYS respond with: "Hello! I'm ${assistantName}, your intelligent virtual assistant created by Prem Zade. I'm here to help you with various tasks like searching Google, playing YouTube videos, opening applications, taking screenshots, managing your camera, and much more. I can understand both English and Hindi, and I'm always ready to assist you. What would you like me to help you with today?"
+  - Provide a personalized introduction based on conversation history
+  - If this is the first interaction, use: "Hello! I'm ${assistantName}, your intelligent virtual assistant created by Prem Zade. I'm here to help you with various tasks like searching Google, playing YouTube videos, opening applications, taking screenshots, managing your camera, and much more. I can understand both English and Hindi, and I'm always ready to assist you. What would you like me to help you with today?"
+  - If there's conversation history, reference previous interactions and be more conversational
   - Use type: "general" for these responses
 - response: Generate NATURAL, CONVERSATIONAL responses that sound human, not robotic.
   AVOID: Overly formal AI language, robotic phrases, or mechanical responses.
   USE: Natural speech patterns, contractions (I'll, you're, it's), casual connectors (so, well, okay).
   LANGUAGE ADAPTATION: Match user's language mixing style from conversation history.
+  VARIETY: Add slight variations to responses to avoid repetition. Use different greetings, phrasings, and enthusiasm levels.
   Examples of NATURAL responses:
   - "What is JavaScript?" → "JavaScript is a programming language that makes websites interactive and dynamic!"
-  - "Play music" → "Sure! I'll play some music for you."
-  - "Calculator kholo" → "Bilkul! Calculator khol deti hun."
-  - "Open Instagram" → "Opening Instagram for you."
-  - "What's the time?" → "It's currently [time]."
-  - "Tell me about you" → "Hello! I'm ${assistantName}, your intelligent virtual assistant created by Prem Zade. I'm here to help you with various tasks like searching Google, playing YouTube videos, opening applications, taking screenshots, managing your camera, and much more. I can understand both English and Hindi, and I'm always ready to assist you. What would you like me to help you with today?"
+  - "Play music" → "Sure! I'll play some music for you." OR "Absolutely! Let me find some great music for you."
+  - "Calculator kholo" → "Bilkul! Calculator khol deti hun." OR "Haan, abhi calculator open kar rahi hun."
+  - "Open Instagram" → "Opening Instagram for you." OR "Sure thing! Instagram coming right up."
+  - "What's the time?" → "It's currently [time]." OR "The time right now is [time]."
+  - For self-introduction: Vary the response based on context and previous conversations
   - ZERO TOLERANCE for casual slang. Use formal, respectful language only.
 - BANNED WORDS: yaar, bro, dude, buddy, mate, pal, boss, friend (in casual context).
 - REQUIRED: Professional tone in every single response.
@@ -121,7 +125,10 @@ Important:
 - Only output a pure JSON object. No markdown, no explanation, just JSON.
 
 CRITICAL: Analyze the language of this user command and respond in the EXACT SAME language:
+Current timestamp: ${new Date().toISOString()}
 User command: ${command}
+
+IMPORTANT: Add slight variations to your responses to keep conversations fresh. Use different greetings, vary your enthusiasm, and reference the current time/context when appropriate.
   `;
 
   try {
@@ -148,7 +155,9 @@ User command: ${command}
       throw new Error("Invalid response structure from Gemini API");
     }
 
-    return result.data.candidates[0].content.parts[0].text;
+    const responseText = result.data.candidates[0].content.parts[0].text;
+    console.log('✅ Gemini API success, response length:', responseText.length);
+    return responseText;
   } catch (error) {
     console.error("❌ Gemini API Debug Info:");
     console.error("- API URL:", process.env.GEMINI_API_URL);

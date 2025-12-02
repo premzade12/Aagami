@@ -83,6 +83,9 @@ export const askToAssistant = async (req, res) => {
     let gemResult;
     
     try {
+      console.log('🔍 Calling Gemini API with command:', command);
+      console.log('🔍 Assistant name:', assistantName);
+      console.log('🔍 History context length:', historyContext.length);
       result = await geminiResponse(`${historyContext}\nUser: ${command}`, assistantName, userName);
       console.log('🤖 Gemini raw response:', result);
       
@@ -117,6 +120,7 @@ export const askToAssistant = async (req, res) => {
     } catch (err) {
       console.error("❌ Gemini API failed, using fallback:", err.message);
       console.error("❌ Full error details:", err.response?.data || err);
+      console.log('🔄 Switching to fallback system...');
       
       // Fallback system
       const lower = command.toLowerCase();
