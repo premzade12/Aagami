@@ -164,11 +164,7 @@ export const askToAssistant = async (req, res) => {
       } else if (lower.includes('time')) {
         gemResult = { type: 'get_time', response: `Of course! The current time is ${moment().format('hh:mm A')}.` };
       } else {
-        // Better Hindi/Hinglish understanding for unclear commands
-        const hindiResponse = detectedLanguage === 'hi-IN' ? 
-          `Namaste! Main aapki baat samjha. Aap kya chahte hain? Main aapki madad kar sakta hun.` :
-          `Thank you for speaking with me! How may I assist you today?`;
-        gemResult = { type: 'general', response: hindiResponse };
+        gemResult = { type: 'general', response: `Thank you for speaking with me! I heard you say: "${command}". How may I assist you today?` };
       }
     }
 
