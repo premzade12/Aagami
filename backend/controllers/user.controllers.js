@@ -508,6 +508,51 @@ export const testGemini = async (req, res) => {
   }
 };
 
+// ✅ Test Vision API
+export const testVision = async (req, res) => {
+  try {
+    const apiKey = process.env.GEMINI_API_KEY;
+    const visionApiUrl = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent";
+    
+    // Test with image data
+    const testPayload = {
+      "contents": [{
+        "parts": [
+          { "text": "What do you see?" },
+          {
+            "inline_data": {
+              "mime_type": "image/jpeg",
+              "data": "/9j/4AAQSkZJRgABAQEAYABgAAD/2wBDAAEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQH/2wBDAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQH/wAARCAABAAEDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAv/xAAUEAEAAAAAAAAAAAAAAAAAAAAA/8QAFQEBAQAAAAAAAAAAAAAAAAAAAAX/xAAUEQEAAAAAAAAAAAAAAAAAAAAA/9oADAMBAAIRAxEAPwA/8A"
+            }
+          }
+        ]
+      }]
+    };
+    
+    console.log('🔍 Testing Vision API with key:', apiKey?.substring(0, 10) + '...');
+    const result = await axios.post(`${visionApiUrl}?key=${apiKey}`, testPayload);
+    console.log('✅ Vision API Success:', result.data);
+    res.json({ success: true, result: result.data });
+    
+  } catch (error) {
+    console.error('❌ Vision API Error Details:');
+    console.error('- Status:', error.response?.status);
+    console.error('- Status Text:', error.response?.statusText);
+    console.error('- Data:', JSON.stringify(error.response?.data, null, 2));
+    console.error('- Message:', error.message);
+    
+    res.status(500).json({ 
+      success: false, 
+      error: {
+        status: error.response?.status,
+        statusText: error.response?.statusText,
+        data: error.response?.data,
+        message: error.message
+      }
+    });
+  }
+};
+
 // ✅ Get Available Voices
 export const getVoices = async (req, res) => {
   try {
@@ -548,7 +593,6 @@ export const visualSearch = async (req, res) => {
     const base64Image = req.file.buffer.toString('base64');
     const apiKey = process.env.GEMINI_API_KEY;
     
-    // Use gemini-1.5-flash which supports vision
     const visionApiUrl = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent";
     
     const requestPayload = {
@@ -565,16 +609,28 @@ export const visualSearch = async (req, res) => {
       }]
     };
     
-    console.log('📷 Making vision API call...');
     const result = await axios.post(`${visionApiUrl}?key=${apiKey}`, requestPayload);
-    console.log('📷 API response:', result.data);
-    
     const description = result.data?.candidates?.[0]?.content?.parts?.[0]?.text || "Camera mein kuch dikh raha hai.";
     res.json({ description });
     
   } catch (error) {
-    console.error('❌ Vision API Error:', error.response?.status, error.response?.data || error.message);
-    res.json({ description: "Camera feed dekh raha hun lekin analyze nahi kar pa raha." });
+    // Detailed error logging and response
+    console.error('❌ Vision API Error Details:');
+    console.error('Status:', error.response?.status);
+    console.error('Status Text:', error.response?.statusText);
+    console.error('Error Data:', JSON.stringify(error.response?.data, null, 2));
+    console.error('Error Message:', error.message);
+    
+    // Return the actual error message to frontend for debugging
+    const errorMsg = error.response?.data?.error?.message || error.message || 'Unknown error';
+    res.json({ 
+      description: `Vision API Error: ${errorMsg}`,
+      debug: {
+        status: error.response?.status,
+        statusText: error.response?.statusText,
+        data: error.response?.data
+      }
+    });
   }
 };
 

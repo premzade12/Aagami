@@ -7,6 +7,7 @@ import {
   addHistory,        // ✅ new controller
   getHistory,        // ✅ new controller
   testGemini,        // ✅ test controller
+  testVision,        // ✅ vision test controller
   getVoices,         // ✅ voice controller
   setUserVoice,      // ✅ voice controller
   visualSearch       // ✅ visual search controller
@@ -26,8 +27,9 @@ userRouter.post("/correct-code", isAuth, correctCode);
 userRouter.post("/add-history", isAuth, addHistory);   // Add history entry
 userRouter.get("/get-history", isAuth, getHistory);    // Get all history entries
 
-// ✅ Test route
+// ✅ Test routes
 userRouter.get("/test-gemini", testGemini);            // Test Gemini API
+userRouter.get("/test-vision", testVision);            // Test Vision API
 
 // ✅ Voice routes
 userRouter.get("/voices", getVoices);                  // Get available voices
