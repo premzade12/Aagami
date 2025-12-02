@@ -178,6 +178,12 @@ export const askToAssistant = async (req, res) => {
         gemResult = { type: 'general', response: `${greeting}! Kaise hain aap? Main aapki kya madad kar sakti hun?` };
       } else if (lower.includes('thank you') || lower.includes('thanks') || lower.includes('धन्यवाद') || lower.includes('शुक्रिया')) {
         gemResult = { type: 'general', response: 'Aapka swagat hai! Koi aur kaam hai jo main kar sakti hun?' };
+      } else if (lower.includes('tell me about you') || lower.includes('about you') || lower.includes('who are you') || 
+                 lower.includes('introduce yourself') || lower.includes('what are you') || lower.includes('your introduction') ||
+                 lower.includes('तुम कौन हो') || lower.includes('आप कौन हैं') || lower.includes('अपना परिचय') ||
+                 lower.includes('tum kaun ho') || lower.includes('aap kaun hain') || lower.includes('apna parichay')) {
+        const introResponse = `Hello! I'm ${assistantName}, your intelligent virtual assistant created by Prem Zade. I'm here to help you with various tasks like searching Google, playing YouTube videos, opening applications, taking screenshots, managing your camera, and much more. I can understand both English and Hindi, and I'm always ready to assist you. What would you like me to help you with today?`;
+        gemResult = { type: 'general', response: introResponse };
       } else {
         // Better Hindi response for unrecognized commands
         const hindiResponse = `Main samjhi nahi. Aap kripaya clear words mein batayiye - jaise "Google search", "time batao", "YouTube play karo", "camera on karo" ya "screenshot lo".`;

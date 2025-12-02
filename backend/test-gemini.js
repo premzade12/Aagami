@@ -5,9 +5,11 @@ dotenv.config();
 const testGemini = async () => {
   try {
     const apiUrl = process.env.GEMINI_API_URL;
+    const apiKey = process.env.GEMINI_API_KEY;
     console.log("Testing API URL:", apiUrl);
+    console.log("API Key exists:", !!apiKey);
     
-    const result = await axios.post(apiUrl, {
+    const result = await axios.post(`${apiUrl}?key=${apiKey}`, {
       "contents": [
         {
           "parts": [
