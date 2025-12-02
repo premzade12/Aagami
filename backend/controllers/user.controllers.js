@@ -593,7 +593,7 @@ export const visualSearch = async (req, res) => {
     const base64Image = req.file.buffer.toString('base64');
     const apiKey = process.env.GEMINI_API_KEY;
     
-    const visionApiUrl = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent";
+    const visionApiUrl = "https://generativelanguage.googleapis.com/v1beta/models/gemini-pro-vision:generateContent";
     
     const requestPayload = {
       "contents": [{
@@ -614,20 +614,11 @@ export const visualSearch = async (req, res) => {
     res.json({ description });
     
   } catch (error) {
-    // Detailed error logging and response
-    console.error('❌ Vision API Error Details:');
-    console.error('Status:', error.response?.status);
-    console.error('Status Text:', error.response?.statusText);
-    console.error('Error Data:', JSON.stringify(error.response?.data, null, 2));
-    console.error('Error Message:', error.message);
-    
-    // Return the actual error message to frontend for debugging
     const errorMsg = error.response?.data?.error?.message || error.message || 'Unknown error';
     res.json({ 
       description: `Vision API Error: ${errorMsg}`,
       debug: {
         status: error.response?.status,
-        statusText: error.response?.statusText,
         data: error.response?.data
       }
     });
