@@ -86,12 +86,30 @@ export const askToAssistant = async (req, res) => {
       result = await geminiResponse(`${historyContext}\nUser: ${command}`, assistantName, userName);
       console.log('🤖 Gemini raw response:', result);
       
-      // Parse Gemini response
-      const jsonMatch = result.match(/```json([\s\S]*?)```|({[\s\S]*})/);
-      if (jsonMatch) {
-        const jsonString = jsonMatch[1] || jsonMatch[2];
-        gemResult = JSON.parse(jsonString);
-        console.log('🤖 Gemini parsed result:', gemResult);
+      // Parse Gemini response - improved JSON extraction
+      let jsonString = null;
+      
+      // Try to extract JSON from markdown code blocks first
+      const markdownMatch = result.match(/```json\s*([\s\S]*?)\s*```/);
+      if (markdownMatch) {
+        jsonString = markdownMatch[1].trim();
+      } else {
+        // Try to find JSON object directly
+        const directMatch = result.match(/({[\s\S]*})/);
+        if (directMatch) {
+          jsonString = directMatch[1];
+        }
+      }
+      
+      if (jsonString) {
+        try {
+          gemResult = JSON.parse(jsonString);
+          console.log('🤖 Gemini parsed result:', gemResult);
+        } catch (parseError) {
+          console.log('🤖 JSON parse failed:', parseError.message);
+          console.log('🤖 Raw JSON string:', jsonString);
+          gemResult = { type: "general", userInput: command, response: result };
+        }
       } else {
         console.log('🤖 Gemini response not JSON, treating as general');
         gemResult = { type: "general", userInput: command, response: result };

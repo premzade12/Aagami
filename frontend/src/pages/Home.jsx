@@ -415,6 +415,10 @@ function Home() {
       return captureAndSearch();
     }
     
+    if (type === "general") {
+      console.log('📝 General response - no specific action needed');
+      return;
+    }
     console.log('⚠️ No matching command type found for:', type);
   }
 
