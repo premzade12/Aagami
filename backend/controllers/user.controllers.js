@@ -163,6 +163,12 @@ export const askToAssistant = async (req, res) => {
         gemResult = { type: 'whatsapp_call', contact: contactName, phone: phoneNumber, response: `I'll be happy to call ${contactName} on WhatsApp for you.` };
       } else if (lower.includes('time')) {
         gemResult = { type: 'get_time', response: `Of course! The current time is ${moment().format('hh:mm A')}.` };
+      } else if (lower.includes('working') || lower.includes('वर्किंग') || lower.includes('काम कर') || lower.includes('चल रहा')) {
+        gemResult = { type: 'general', response: 'Haan bilkul! Main perfectly working hun. Aap kya chahte hain?' };
+      } else if (lower.includes('hello') || lower.includes('hi') || lower.includes('namaste') || lower.includes('नमस्ते')) {
+        gemResult = { type: 'general', response: 'Namaste! Main aapka virtual assistant hun. Kaise madad kar sakta hun?' };
+      } else if (lower.includes('how are you') || lower.includes('kaise ho') || lower.includes('कैसे हो')) {
+        gemResult = { type: 'general', response: 'Main bilkul theek hun! Aap batayiye, kya kaam hai?' };
       } else {
         gemResult = { type: 'general', response: `Thank you for speaking with me! I heard you say: "${command}". How may I assist you today?` };
       }
