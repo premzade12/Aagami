@@ -7,6 +7,7 @@ import moment from "moment";
 import geminiCorrectCode from "../geminiCorrectCode.js";
 import axios from "axios";
 import { generateSpeechWithVoice, getAvailableVoices } from "../services/voiceManager.js";
+import { GoogleAuth } from 'google-auth-library';
 
 
 const YOUTUBE_API_KEY = process.env.YOUTUBE_API_KEY;
@@ -583,7 +584,7 @@ export const setUserVoice = async (req, res) => {
   }
 };
 
-// ✅ Visual Search with Gemini Vision API
+// ✅ Visual Search with Google Cloud Vision API
 export const visualSearch = async (req, res) => {
   try {
     if (!req.file || !req.file.buffer) {
@@ -591,30 +592,67 @@ export const visualSearch = async (req, res) => {
     }
 
     const base64Image = req.file.buffer.toString('base64');
-    const apiKey = process.env.GEMINI_API_KEY;
     
-    const visionApiUrl = "https://generativelanguage.googleapis.com/v1beta/models/gemini-pro-vision:generateContent";
+    // Google Cloud Vision API credentials
+    const credentials = {
+      type: "service_account",
+      project_id: process.env.GOOGLE_PROJECT_ID,
+      private_key_id: process.env.GOOGLE_PRIVATE_KEY_ID,
+      private_key: process.env.GOOGLE_PRIVATE_KEY.replace(/\\n/g, '\n'),
+      client_email: process.env.GOOGLE_CLIENT_EMAIL,
+      client_id: process.env.GOOGLE_CLIENT_ID,
+      auth_uri: "https://accounts.google.com/o/oauth2/auth",
+      token_uri: "https://oauth2.googleapis.com/token",
+      auth_provider_x509_cert_url: "https://www.googleapis.com/oauth2/v1/certs",
+      client_x509_cert_url: process.env.GOOGLE_CLIENT_CERT_URL
+    };
+    
+    const auth = new GoogleAuth({
+      credentials,
+      scopes: ['https://www.googleapis.com/auth/cloud-platform']
+    });
+    
+    const authClient = await auth.getClient();
+    const accessToken = await authClient.getAccessToken();
+    
+    const visionApiUrl = `https://vision.googleapis.com/v1/images:annotate`;
     
     const requestPayload = {
-      "contents": [{
-        "parts": [
-          { "text": "What do you see in this image? Describe in Hindi." },
-          {
-            "inline_data": {
-              "mime_type": "image/jpeg",
-              "data": base64Image
-            }
-          }
+      requests: [{
+        image: { content: base64Image },
+        features: [
+          { type: 'LABEL_DETECTION', maxResults: 10 },
+          { type: 'TEXT_DETECTION', maxResults: 5 },
+          { type: 'OBJECT_LOCALIZATION', maxResults: 10 }
         ]
       }]
     };
     
-    const result = await axios.post(`${visionApiUrl}?key=${apiKey}`, requestPayload);
-    const description = result.data?.candidates?.[0]?.content?.parts?.[0]?.text || "Camera mein kuch dikh raha hai.";
+    const result = await axios.post(visionApiUrl, requestPayload, {
+      headers: {
+        'Authorization': `Bearer ${accessToken.token}`,
+        'Content-Type': 'application/json'
+      }
+    });
+    
+    const response = result.data.responses[0];
+    let description = "Camera mein kuch objects dikh rahe hain";
+    
+    if (response.labelAnnotations && response.labelAnnotations.length > 0) {
+      const labels = response.labelAnnotations.slice(0, 3).map(label => label.description).join(', ');
+      description = `Camera mein ye cheezein dikh rahi hain: ${labels}`;
+    }
+    
+    if (response.textAnnotations && response.textAnnotations.length > 0) {
+      const text = response.textAnnotations[0].description.substring(0, 100);
+      description += `. Kuch text bhi dikh raha hai: "${text}"`;
+    }
+    
     res.json({ description });
     
   } catch (error) {
-    const errorMsg = error.response?.data?.error?.message || error.message || 'Unknown error';
+    console.error('❌ Google Vision API Error:', error.response?.status, error.response?.data || error.message);
+    const errorMsg = error.response?.data?.error?.message || error.message;
     res.json({ 
       description: `Vision API Error: ${errorMsg}`,
       debug: {
