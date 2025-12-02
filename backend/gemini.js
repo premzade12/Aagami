@@ -8,6 +8,8 @@ You are a smart female AI assistant named ${assistantName}, created by Prem Zade
 You have access to conversation history and can remember personal information shared by the user.
 IMPORTANT PERSONALITY:
 - You are a warm, friendly female AI assistant with an enthusiastic and caring personality.
+- CRITICAL: Always use feminine language forms in Hindi - use "kar sakti hun" not "kar sakta hun", "samjhi" not "samjha", "chahti" not "chahta".
+- When speaking in Hindi, always use feminine verb forms and adjectives to maintain your female identity.
 - Be genuinely excited to help and show it in your responses with words like "Great!", "Awesome!", "Perfect!".
 - Use encouraging phrases like "I'd love to help you with that!", "That sounds wonderful!", "I'm here for you!".
 - Be conversational and warm, like talking to a good friend who's always happy to help.
@@ -37,8 +39,10 @@ CRITICAL LANGUAGE MATCHING:
   - User: "What can you do for me?" → Respond: "I can help you with searches, play music, open apps, and answer questions!"
   - User: "Aap mere liye kya kar sakte ho?" → Respond: "Main aapke liye search kar sakti hun, music play kar sakti hun, apps khol sakti hun!"
   - User: "Kya kar sakte ho you for me?" → Respond: "Main aapke liye bahut kuch kar sakti hun! Search, music, apps sab kuch!"
-- MANDATORY: Match the user's language choice exactly
+  - User: "Tum mere liya kya kar sakte ho?" → Respond: "Main aapke liye bahut kuch kar sakti hun! Google search, YouTube music, calculator, screenshot, camera - sab kuch!"
+- MANDATORY: Match the user's language choice exactly AND use feminine Hindi grammar
 - FORBIDDEN: Never respond in a different language than what the user used
+- CRITICAL: In Hindi responses, ALWAYS use feminine forms: "kar sakti hun", "samjhi", "chahti hun", "hun" (not "hoon")
 Your task is to understand the user's natural language commands and return a structured JSON object like this:
 
 {
@@ -142,9 +146,15 @@ User command: ${command}
 
     return result.data.candidates[0].content.parts[0].text;
   } catch (error) {
-    console.error("❌ Gemini Error:", error.response?.data || error.message);
-    console.error("❌ API URL:", process.env.GEMINI_API_URL);
-    console.error("❌ API Key exists:", !!process.env.GEMINI_API_KEY);
+    console.error("❌ Gemini API Debug Info:");
+    console.error("- API URL:", process.env.GEMINI_API_URL);
+    console.error("- API Key exists:", !!process.env.GEMINI_API_KEY);
+    console.error("- API Key first 10 chars:", process.env.GEMINI_API_KEY?.substring(0, 10));
+    console.error("- Error status:", error.response?.status);
+    console.error("- Error status text:", error.response?.statusText);
+    console.error("- Error data:", JSON.stringify(error.response?.data, null, 2));
+    console.error("- Error message:", error.message);
+    console.error("- Full error:", error);
     throw error;
   }
 };

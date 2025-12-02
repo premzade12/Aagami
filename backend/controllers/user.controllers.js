@@ -165,14 +165,22 @@ export const askToAssistant = async (req, res) => {
       } else if (lower.includes('time')) {
         gemResult = { type: 'get_time', response: `Of course! The current time is ${moment().format('hh:mm A')}.` };
       } else if (lower.includes('working') || lower.includes('वर्किंग') || lower.includes('काम कर') || lower.includes('चल रहा')) {
-        gemResult = { type: 'general', response: 'Haan bilkul! Main perfectly working hun. Aap kya chahte hain?' };
+        gemResult = { type: 'general', response: 'Haan bilkul! Main perfectly working hun. Aap kya chahti hain?' };
       } else if (lower.includes('hello') || lower.includes('hi') || lower.includes('namaste') || lower.includes('नमस्ते')) {
-        gemResult = { type: 'general', response: 'Namaste! Main aapka virtual assistant hun. Kaise madad kar sakta hun?' };
+        gemResult = { type: 'general', response: 'Namaste! Main aapki virtual assistant hun. Kaise madad kar sakti hun?' };
       } else if (lower.includes('how are you') || lower.includes('kaise ho') || lower.includes('कैसे हो')) {
         gemResult = { type: 'general', response: 'Main bilkul theek hun! Aap batayiye, kya kaam hai?' };
+      } else if (lower.includes('kya kar sakte') || lower.includes('what can you do') || lower.includes('help') || lower.includes('मदद') || lower.includes('capabilities')) {
+        gemResult = { type: 'general', response: 'Main bahut kuch kar sakti hun! Main Google search kar sakti hun, YouTube videos play kar sakti hun, time bata sakti hun, calculator khol sakti hun, screenshot le sakti hun, camera on/off kar sakti hun, aur visual search bhi kar sakti hun. Aap kya chahti hain?' };
+      } else if (lower.includes('good morning') || lower.includes('good evening') || lower.includes('सुप्रभात') || lower.includes('शुभ संध्या')) {
+        const hour = new Date().getHours();
+        const greeting = hour < 12 ? 'Suprabhat' : hour < 17 ? 'Namaskar' : 'Shubh sandhya';
+        gemResult = { type: 'general', response: `${greeting}! Kaise hain aap? Main aapki kya madad kar sakti hun?` };
+      } else if (lower.includes('thank you') || lower.includes('thanks') || lower.includes('धन्यवाद') || lower.includes('शुक्रिया')) {
+        gemResult = { type: 'general', response: 'Aapka swagat hai! Koi aur kaam hai jo main kar sakti hun?' };
       } else {
         // Better Hindi response for unrecognized commands
-        const hindiResponse = `Namaste! Aap ne kaha "${command}". Main samjha nahi, kripaya saaf shabdon mein batayiye ki aap kya chahte hain?`;
+        const hindiResponse = `Main samjhi nahi. Aap kripaya clear words mein batayiye - jaise "Google search", "time batao", "YouTube play karo", "camera on karo" ya "screenshot lo".`;
         gemResult = { type: 'general', response: hindiResponse };
       }
     }
@@ -510,11 +518,39 @@ export const getHistory = async (req, res) => {
 // ✅ Test Gemini API
 export const testGemini = async (req, res) => {
   try {
-    const result = await geminiResponse("Hello, just testing", "Assistant", "User");
-    res.json({ success: true, result });
+    console.log('🔍 Testing Gemini API directly...');
+    const apiUrl = process.env.GEMINI_API_URL;
+    const apiKey = process.env.GEMINI_API_KEY;
+    
+    console.log('API URL:', apiUrl);
+    console.log('API Key exists:', !!apiKey);
+    
+    const testPayload = {
+      "contents": [{
+        "parts": [{
+          "text": "Hello, just testing. Respond with: {\"type\": \"general\", \"response\": \"Test successful\"}"
+        }]
+      }]
+    };
+    
+    const result = await axios.post(`${apiUrl}?key=${apiKey}`, testPayload);
+    console.log('✅ Direct API test successful:', result.data);
+    
+    res.json({ success: true, result: result.data });
   } catch (error) {
-    console.error("❌ Gemini test error:", error.response?.data || error.message);
-    res.status(500).json({ success: false, error: error.message });
+    console.error('❌ Direct Gemini API test failed:');
+    console.error('Status:', error.response?.status);
+    console.error('Data:', JSON.stringify(error.response?.data, null, 2));
+    console.error('Message:', error.message);
+    
+    res.status(500).json({ 
+      success: false, 
+      error: {
+        status: error.response?.status,
+        data: error.response?.data,
+        message: error.message
+      }
+    });
   }
 };
 
