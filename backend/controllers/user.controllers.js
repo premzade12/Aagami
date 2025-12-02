@@ -593,6 +593,11 @@ export const visualSearch = async (req, res) => {
 
     const base64Image = req.file.buffer.toString('base64');
     
+    // Check if all required credentials are present
+    if (!process.env.GOOGLE_PROJECT_ID || !process.env.GOOGLE_PRIVATE_KEY || !process.env.GOOGLE_CLIENT_EMAIL) {
+      throw new Error('Missing Google Cloud credentials in environment variables');
+    }
+    
     // Google Cloud Vision API credentials
     const credentials = {
       type: "service_account",

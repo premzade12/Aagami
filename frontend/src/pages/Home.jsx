@@ -842,7 +842,7 @@ function Home() {
 
       {/* Right panel: AI Response */}
       {showOutput && (
-        <div className="absolute right-[30px] w-[30%] md:w-[20%] bg-black border border-blue-500 p-4 rounded-lg text-green-400 whitespace-pre-wrap max-h-[50vh] overflow-auto shadow sm:flex hidden relative">
+        <div className="absolute right-[30px] w-[30%] md:w-[20%] bg-black border border-blue-500 p-4 rounded-lg text-green-400 whitespace-pre-wrap max-h-[50vh] overflow-auto shadow sm:flex hidden ">
           {loading ? "Loading..." : response}
           {response && !loading && (
             <button
