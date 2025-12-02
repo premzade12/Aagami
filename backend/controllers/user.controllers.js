@@ -98,6 +98,7 @@ export const askToAssistant = async (req, res) => {
       }
     } catch (err) {
       console.error("❌ Gemini API failed, using fallback:", err.message);
+      console.error("❌ Full error details:", err.response?.data || err);
       
       // Fallback system
       const lower = command.toLowerCase();
@@ -170,7 +171,9 @@ export const askToAssistant = async (req, res) => {
       } else if (lower.includes('how are you') || lower.includes('kaise ho') || lower.includes('कैसे हो')) {
         gemResult = { type: 'general', response: 'Main bilkul theek hun! Aap batayiye, kya kaam hai?' };
       } else {
-        gemResult = { type: 'general', response: `Thank you for speaking with me! I heard you say: "${command}". How may I assist you today?` };
+        // Better Hindi response for unrecognized commands
+        const hindiResponse = `Namaste! Aap ne kaha "${command}". Main samjha nahi, kripaya saaf shabdon mein batayiye ki aap kya chahte hain?`;
+        gemResult = { type: 'general', response: hindiResponse };
       }
     }
 
