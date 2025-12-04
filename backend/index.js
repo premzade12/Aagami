@@ -7,6 +7,7 @@ import authRouter from "./routes/auth.routes.js";
 import cors from "cors";
 import cookieParser from "cookie-parser";
 import userRouter from "./routes/user.routes.js";
+import windowsRouter from "./routes/windows.routes.js";
 import geminiResponse from "./gemini.js";
 
 // Load environment variables
@@ -30,6 +31,7 @@ app.use(cookieParser());
 // Routes
 app.use("/api/auth", authRouter);
 app.use("/api/user", userRouter);
+app.use("/api/windows", windowsRouter);
 
 // Test route
 app.get("/", (req, res) => {

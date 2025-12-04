@@ -7,6 +7,8 @@ import userImg from "../assets/Voice.gif";
 import axios from "axios";
 import { IoMenuOutline } from "react-icons/io5";
 import { RxCross2 } from "react-icons/rx";
+import WhatsAppNotificationMonitor from "../utils/whatsappNotifications";
+import WindowsWhatsAppMonitor from "../utils/windowsWhatsappMonitor";
 
 function Home() {
   const navigate = useNavigate();
@@ -32,6 +34,8 @@ function Home() {
   const [cameraActive, setCameraActive] = useState(false);
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
+  const [whatsappMonitoring, setWhatsappMonitoring] = useState(false);
+  const whatsappMonitorRef = useRef(null);
 
   const inputRef = useRef();
   const inputValue = useRef("");
@@ -372,6 +376,33 @@ function Home() {
     }
   }
 
+  // --- WhatsApp Monitoring Functions ---
+  function toggleWhatsAppMonitoring() {
+    if (!whatsappMonitoring) {
+      // Start monitoring - detect Windows vs Web
+      const isWindows = navigator.platform.toLowerCase().includes('win');
+      
+      if (!whatsappMonitorRef.current) {
+        whatsappMonitorRef.current = isWindows ? 
+          new WindowsWhatsAppMonitor(speak) : 
+          new WhatsAppNotificationMonitor(speak);
+      }
+      
+      whatsappMonitorRef.current.startMonitoring();
+      setWhatsappMonitoring(true);
+      
+      const platform = isWindows ? 'Windows WhatsApp app' : 'WhatsApp Web';
+      speak(`${platform} message monitoring enabled. I will announce new messages.`, null, 'en-US');
+    } else {
+      // Stop monitoring
+      if (whatsappMonitorRef.current) {
+        whatsappMonitorRef.current.stopMonitoring();
+      }
+      setWhatsappMonitoring(false);
+      speak('WhatsApp message monitoring disabled.', null, 'en-US');
+    }
+  }
+
   // --- Handle command actions ---
   async function handleCommand(data) {
     const { type, action, url, userInput, query } = data;
@@ -414,10 +445,18 @@ function Home() {
       console.log('🔍 Visual search - capturing and analyzing');
       return captureAndSearch();
     }
+    if (type === "whatsapp_monitor" || type === "monitor_whatsapp" || action === "toggle_whatsapp_monitoring") {
+      console.log('📱 Toggling WhatsApp monitoring');
+      return toggleWhatsAppMonitoring();
+    }
     
     if (type === "general") {
       console.log('📝 General response - no specific action needed');
       return;
+    }
+    if (type === "whatsapp_monitor") {
+      console.log('📱 WhatsApp monitoring command');
+      return toggleWhatsAppMonitoring();
     }
     console.log('⚠️ No matching command type found for:', type);
   }
@@ -785,6 +824,11 @@ function Home() {
             `😴 ${userData?.assistantName} is sleeping. Say "wake up ${userData?.assistantName}" to wake me up.`
           }
         </p>
+        {whatsappMonitoring && (
+          <p className="text-xs text-green-400 mt-1 flex items-center gap-1">
+            <span className="animate-pulse">📱</span> WhatsApp monitoring active
+          </p>
+        )}
         
 
 

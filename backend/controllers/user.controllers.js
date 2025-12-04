@@ -160,6 +160,11 @@ export const askToAssistant = async (req, res) => {
                  lower.includes('seeing in') && lower.includes('camera') || lower.includes('see in') && lower.includes('camera') ||
                  lower.includes('what do you see') || lower.includes('camera view') || lower.includes('in my camera')) {
         gemResult = { type: 'visual_search', response: 'Analyzing camera feed!' };
+      } else if (lower.includes('monitor whatsapp') || lower.includes('whatsapp monitor') || lower.includes('whatsapp notifications') ||
+                 lower.includes('enable whatsapp') || lower.includes('disable whatsapp') || lower.includes('whatsapp alerts') ||
+                 lower.includes('whatsapp messages') && (lower.includes('monitor') || lower.includes('notify') || lower.includes('alert'))) {
+        const action = lower.includes('disable') || lower.includes('stop') || lower.includes('off') ? 'disable' : 'enable';
+        gemResult = { type: 'whatsapp_monitor', response: `${action === 'enable' ? 'Enabling' : 'Disabling'} WhatsApp message monitoring.` };
       } else if (lower.includes('call')) {
         // Extract contact name and phone number from "call [name] on [number]" or "call [name] at [number]"
         let contactInfo = command.replace(/call/gi, '').trim();
@@ -407,6 +412,9 @@ export const askToAssistant = async (req, res) => {
         // For visual search, we need to trigger the actual camera capture and analysis
         const visualSearchResponse = detectedLanguage === 'hi-IN' ? "Camera se dekh raha hun..." : "Analyzing camera feed...";
         return res.json({ type, response: visualSearchResponse, audioUrl, language: detectedLanguage, action: "capture_and_search" });
+      case "whatsapp_monitor":
+        const monitorResponse = detectedLanguage === 'hi-IN' ? "WhatsApp message monitoring toggle kar raha hun!" : "Toggling WhatsApp message monitoring!";
+        return res.json({ type, response: monitorResponse, audioUrl, language: detectedLanguage, action: "toggle_whatsapp_monitoring" });
       case "whatsapp_message":
         const contact = gemResult.contact || "";
         const message = gemResult.message || "Hi";
