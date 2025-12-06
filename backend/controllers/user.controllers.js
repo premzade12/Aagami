@@ -104,16 +104,25 @@ export const askToAssistant = async (req, res) => {
       
       if (jsonString) {
         try {
-          // Clean up HTML entities if present
-          jsonString = jsonString.replace(/&quot;/g, '"').replace(/&amp;/g, '&');
+          // Clean up HTML entities and escape sequences
+          jsonString = jsonString
+            .replace(/&quot;/g, '"')
+            .replace(/&amp;/g, '&')
+            .replace(/&lt;/g, '<')
+            .replace(/&gt;/g, '>')
+            .replace(/\\n/g, ' ')
+            .replace(/\\r/g, '')
+            .replace(/\\t/g, ' ');
+          
           gemResult = JSON.parse(jsonString);
-          console.log('✅ Parsed JSON - Type:', gemResult.type, 'Response length:', gemResult.response?.length);
+          console.log('✅ Parsed - Type:', gemResult.type, 'Response preview:', gemResult.response?.substring(0, 50));
         } catch (parseError) {
-          console.log('❌ JSON parse failed:', parseError.message);
+          console.log('❌ Parse error:', parseError.message);
+          console.log('❌ Failed JSON:', jsonString.substring(0, 200));
           gemResult = { type: "general", userInput: command, response: "I'm having trouble understanding. Please try again." };
         }
       } else {
-        console.log('⚠️ No JSON found in response');
+        console.log('⚠️ No JSON found');
         gemResult = { type: "general", userInput: command, response: "I'm having trouble understanding. Please try again." };
       }
     } catch (err) {
@@ -221,8 +230,19 @@ export const askToAssistant = async (req, res) => {
 
     const type = gemResult.type || "general";
     const userInput = gemResult.userInput || command;
-    const assistantResponse = gemResult.response || "I'm here to help you!";
+    // Clean the response - remove emojis and extra formatting for speech
+    let assistantResponse = gemResult.response || "I'm here to help you!";
+    
+    // Remove markdown formatting and emojis for cleaner speech
+    assistantResponse = assistantResponse
+      .replace(/[*_~`]/g, '') // Remove markdown
+      .replace(/[\u{1F300}-\u{1F9FF}]/gu, '') // Remove emojis
+      .replace(/\s+/g, ' ') // Normalize whitespace
+      .trim();
+    
     const query = gemResult.query;
+    
+    console.log('✅ Final response to speak:', assistantResponse.substring(0, 100));
     
     // Enhanced language detection - prioritize input language
     const detectLanguage = (inputText) => {
@@ -489,6 +509,7 @@ export const askToAssistant = async (req, res) => {
         }
       case "general":
       default:
+        console.log('📤 Sending response:', { type, responseLength: assistantResponse.length, language: detectedLanguage });
         return res.json({ type, response: assistantResponse, audioUrl, language: detectedLanguage });
     }
   } catch (error) {

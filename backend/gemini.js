@@ -143,7 +143,12 @@ User command: ${command}
       throw new Error("Invalid response structure from Gemini API");
     }
 
-    return result.data.candidates[0].content.parts[0].text;
+    let responseText = result.data.candidates[0].content.parts[0].text;
+    
+    // Strip markdown code blocks if Gemini still adds them
+    responseText = responseText.replace(/```json\s*/g, '').replace(/```\s*/g, '').trim();
+    
+    return responseText;
   } catch (error) {
     console.error("❌ Gemini Error:", error.response?.data || error.message);
     console.error("❌ API URL:", process.env.GEMINI_API_URL);
