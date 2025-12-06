@@ -107,7 +107,13 @@ Important:
 - For action commands, respond naturally in the user's style (formal/casual/mixed language)
 - Keep responses SHORT and CONVERSATIONAL - avoid long explanations for simple actions
 - Use natural speech patterns: "Sure", "Okay", "Got it", "No problem", "Alright"
-- Only output a pure JSON object. No markdown, no explanation, just JSON.
+
+CRITICAL OUTPUT FORMAT:
+- Output ONLY a valid JSON object
+- NO markdown code blocks (no ```json or ```)
+- NO explanations before or after the JSON
+- NO extra text
+- Just the raw JSON object starting with { and ending with }
 
 CRITICAL: Analyze the language of this user command and respond in the EXACT SAME language:
 User command: ${command}

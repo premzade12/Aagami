@@ -84,16 +84,14 @@ export const askToAssistant = async (req, res) => {
     
     try {
       console.log('🔍 Calling Gemini API with command:', command);
-      console.log('🔍 Assistant name:', assistantName);
-      console.log('🔍 History context length:', historyContext.length);
       result = await geminiResponse(`${historyContext}\nUser: ${command}`, assistantName, userName);
-      console.log('🤖 Gemini raw response:', result);
+      console.log('🤖 Gemini raw response:', result.substring(0, 200));
       
-      // Parse Gemini response - improved JSON extraction
+      // Parse Gemini response - extract JSON from markdown or direct
       let jsonString = null;
       
-      // Try to extract JSON from markdown code blocks first
-      const markdownMatch = result.match(/```json\s*([\s\S]*?)\s*```/);
+      // Remove markdown code blocks
+      const markdownMatch = result.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
       if (markdownMatch) {
         jsonString = markdownMatch[1].trim();
       } else {
@@ -106,16 +104,17 @@ export const askToAssistant = async (req, res) => {
       
       if (jsonString) {
         try {
+          // Clean up HTML entities if present
+          jsonString = jsonString.replace(/&quot;/g, '"').replace(/&amp;/g, '&');
           gemResult = JSON.parse(jsonString);
-          console.log('🤖 Gemini parsed result:', gemResult);
+          console.log('✅ Parsed JSON - Type:', gemResult.type, 'Response length:', gemResult.response?.length);
         } catch (parseError) {
-          console.log('🤖 JSON parse failed:', parseError.message);
-          console.log('🤖 Raw JSON string:', jsonString);
-          gemResult = { type: "general", userInput: command, response: result };
+          console.log('❌ JSON parse failed:', parseError.message);
+          gemResult = { type: "general", userInput: command, response: "I'm having trouble understanding. Please try again." };
         }
       } else {
-        console.log('🤖 Gemini response not JSON, treating as general');
-        gemResult = { type: "general", userInput: command, response: result };
+        console.log('⚠️ No JSON found in response');
+        gemResult = { type: "general", userInput: command, response: "I'm having trouble understanding. Please try again." };
       }
     } catch (err) {
       console.error("❌ Gemini API failed, using fallback:", err.message);
