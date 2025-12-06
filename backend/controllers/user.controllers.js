@@ -227,16 +227,37 @@ export const askToAssistant = async (req, res) => {
     const userInput = gemResult.userInput || command;
     let assistantResponse = gemResult.response || "I'm here to help you!";
     
-    // CRITICAL: Clean response before using it for TTS or sending to frontend
+    // Check if response contains nested JSON (Gemini sometimes does this)
+    if (assistantResponse.includes('```json') || (assistantResponse.includes('{') && assistantResponse.includes('"type"'))) {
+      console.log('⚠️ Response contains nested JSON, extracting actual text...');
+      
+      // Remove markdown blocks first
+      assistantResponse = assistantResponse.replace(/```json/gi, '').replace(/```/g, '');
+      
+      // Try to parse and extract the nested response field
+      try {
+        const jsonMatch = assistantResponse.match(/\{[\s\S]*\}/);
+        if (jsonMatch) {
+          const nestedJson = JSON.parse(jsonMatch[0].replace(/\\n/g, '\n').replace(/\\"/g, '"'));
+          if (nestedJson.response) {
+            assistantResponse = nestedJson.response;
+            console.log('✅ Extracted nested response successfully');
+          }
+        }
+      } catch (e) {
+        console.log('⚠️ Could not parse nested JSON, using as-is');
+      }
+    }
+    
+    // Only remove markdown symbols, keep emojis and natural formatting
     assistantResponse = assistantResponse
-      .replace(/[*_~`#]/g, '') // Remove markdown
-      .replace(/[\u{1F300}-\u{1F9FF}]/gu, '') // Remove emojis
+      .replace(/[*_~`]/g, '') // Remove markdown symbols only
       .replace(/\n+/g, ' ') // Newlines to space
       .replace(/\s+/g, ' ') // Normalize whitespace
       .trim();
     
     const query = gemResult.query;
-    console.log('💬 Clean response:', assistantResponse.substring(0, 80));
+    console.log('💬 Final response:', assistantResponse.substring(0, 80));
     
     // Enhanced language detection
     const detectLanguage = (inputText) => {
