@@ -287,219 +287,100 @@ export const askToAssistant = async (req, res) => {
       console.error('❌ Full error:', error.response?.data || error);
     }
 
-    // Handle command types
+    // Handle command types - ALL responses use the cleaned assistantResponse
     switch (type) {
       case "get_date":
-        const dateResponse = `Current date is ${moment().format("YYYY-MM-DD")}`;
-        const dateAudio = null; // Simplified - use main audioUrl
-        return res.json({ type, response: dateResponse, audioUrl: dateAudio || audioUrl, language: detectedLanguage });
+        assistantResponse = `Current date is ${moment().format("YYYY-MM-DD")}`;
+        return res.json({ type, response: assistantResponse, audioUrl, language: detectedLanguage });
       case "get_time":
-        const timeResponse = `Current time is ${moment().format("hh:mm A")}`;
-        const timeAudio = null;
-        return res.json({ type, response: timeResponse, audioUrl: timeAudio || audioUrl, language: detectedLanguage });
+        assistantResponse = `Current time is ${moment().format("hh:mm A")}`;
+        return res.json({ type, response: assistantResponse, audioUrl, language: detectedLanguage });
       case "get_day":
-        const dayResponse = `Today is ${moment().format("dddd")}`;
-        const dayAudio = null;
-        return res.json({ type, response: dayResponse, audioUrl: dayAudio || audioUrl, language: detectedLanguage });
+        assistantResponse = `Today is ${moment().format("dddd")}`;
+        return res.json({ type, response: assistantResponse, audioUrl, language: detectedLanguage });
       case "get_month":
-        const monthResponse = `Current month is ${moment().format("MMMM")}`;
-        const monthAudio = null;
-        return res.json({ type, response: monthResponse, audioUrl: monthAudio || audioUrl, language: detectedLanguage });
+        assistantResponse = `Current month is ${moment().format("MMMM")}`;
+        return res.json({ type, response: assistantResponse, audioUrl, language: detectedLanguage });
       case "google_search":
-        console.log("🔍 Google Search Debug:");
-        console.log("gemResult.query:", gemResult.query);
-        console.log("query:", query);
-        console.log("userInput:", userInput);
-        console.log("command:", command);
-        
         let searchQuery = gemResult.query || query || userInput;
         if (!searchQuery) {
-          // Extract search term from user input
-          searchQuery = command.replace(/search|google|on google|for/gi, '').trim();
-          console.log("Extracted searchQuery:", searchQuery);
-          if (!searchQuery) searchQuery = command; // Use full command if extraction fails
+          searchQuery = command.replace(/search|google|on google|for/gi, '').trim() || command;
         }
         const googleUrl = `https://www.google.com/search?q=${encodeURIComponent(searchQuery)}`;
-        const searchResponse = `Searching for "${searchQuery}" on Google`;
-        let searchAudio = null;
-        try {
-          searchAudio = await generateSpeechWithVoice(searchResponse, detectedLanguage, detectedLanguage);
-        } catch (e) { /* ignore */ }
-        return res.json({ type, response: searchResponse, query: searchQuery, url: googleUrl, audioUrl: searchAudio || audioUrl, language: detectedLanguage });
+        return res.json({ type, response: assistantResponse, query: searchQuery, url: googleUrl, audioUrl, language: detectedLanguage });
       case "play_youtube":
         try {
           const songQuery = query || userInput || "popular songs 2024";
-          console.log('🎵 Searching YouTube for:', songQuery);
-          
-          // Search YouTube and scrape first video ID
           const searchUrl = `https://www.youtube.com/results?search_query=${encodeURIComponent(songQuery)}`;
-          
           const searchResponse = await axios.get(searchUrl, {
-            headers: {
-              'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
-            }
+            headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' }
           });
-          
-          // Extract first video ID from HTML
-          const html = searchResponse.data;
-          const videoIdMatch = html.match(/"videoId":"([a-zA-Z0-9_-]{11})"/); 
+          const videoIdMatch = searchResponse.data.match(/"videoId":"([a-zA-Z0-9_-]{11})"/); 
           
           if (videoIdMatch && videoIdMatch[1]) {
-            const videoId = videoIdMatch[1];
-            const videoUrl = `https://www.youtube.com/watch?v=${videoId}`;
-            const playResponse = `Playing "${songQuery}" on YouTube`;
-            
-            console.log('🎵 Found video ID:', videoId);
-            console.log('🎵 Playing:', videoUrl);
-            
-            let playAudio = null;
-            try {
-              playAudio = await generateSpeechWithVoice(playResponse, detectedLanguage, detectedLanguage);
-            } catch (e) { /* ignore */ }
-            
-            return res.json({ type, response: playResponse, url: videoUrl, audioUrl: playAudio || audioUrl, language: detectedLanguage });
-          } else {
-            console.log('🎵 No video ID found, using search fallback');
-            const fallbackResponse = `Searching for "${songQuery}" on YouTube`;
-            
-            let fallbackAudio = null;
-            try {
-              fallbackAudio = await generateSpeechWithVoice(fallbackResponse, detectedLanguage, detectedLanguage);
-            } catch (e) { /* ignore */ }
-            
-            return res.json({ type, response: fallbackResponse, url: searchUrl, audioUrl: fallbackAudio || audioUrl, language: detectedLanguage });
+            const videoUrl = `https://www.youtube.com/watch?v=${videoIdMatch[1]}`;
+            return res.json({ type, response: assistantResponse, url: videoUrl, audioUrl, language: detectedLanguage });
           }
+          return res.json({ type, response: assistantResponse, url: searchUrl, audioUrl, language: detectedLanguage });
         } catch (error) {
-          console.error('🎵 YouTube scraping error:', error.message);
-          
-          // Fallback to search
           const songQuery = query || userInput || "music";
           const fallbackUrl = `https://www.youtube.com/results?search_query=${encodeURIComponent(songQuery)}`;
-          const errorResponse = `Opening YouTube search for "${songQuery}"`;
-          
-          let errorAudio = null;
-          try {
-            errorAudio = await generateSpeechWithVoice(errorResponse, detectedLanguage, detectedLanguage);
-          } catch (e) { /* ignore */ }
-          
-          return res.json({ type, response: errorResponse, url: fallbackUrl, audioUrl: errorAudio || audioUrl, language: detectedLanguage });
+          return res.json({ type, response: assistantResponse, url: fallbackUrl, audioUrl, language: detectedLanguage });
         }
       case "open_instagram":
-        let instaAudio = audioUrl; // Use main audio
-        if (!instaAudio) {
-          try {
-            instaAudio = await generateSpeechWithVoice(assistantResponse, detectedLanguage, detectedLanguage);
-          } catch (e) { /* ignore */ }
-        }
-        return res.json({ type, response: assistantResponse, url: "https://www.instagram.com", audioUrl: instaAudio, language: detectedLanguage });
+        return res.json({ type, response: assistantResponse, url: "https://www.instagram.com", audioUrl, language: detectedLanguage });
       case "open_whatsapp":
-        let whatsappAudio = audioUrl; // Use main audio
-        if (!whatsappAudio) {
-          try {
-            whatsappAudio = await generateSpeechWithVoice(assistantResponse, detectedLanguage, detectedLanguage);
-          } catch (e) { /* ignore */ }
-        }
-        return res.json({ type, response: assistantResponse, url: "https://web.whatsapp.com", audioUrl: whatsappAudio, language: detectedLanguage });
+        return res.json({ type, response: assistantResponse, url: "https://web.whatsapp.com", audioUrl, language: detectedLanguage });
       case "open_calculator":
-        let calcAudio = audioUrl;
-        if (!calcAudio) {
-          try {
-            calcAudio = await generateSpeechWithVoice(assistantResponse, detectedLanguage, detectedLanguage);
-          } catch (e) { /* ignore */ }
-        }
-        return res.json({ type, response: assistantResponse, action: "open_calculator", audioUrl: calcAudio, language: detectedLanguage });
+        return res.json({ type, response: assistantResponse, action: "open_calculator", audioUrl, language: detectedLanguage });
       case "take_screenshot":
-        const screenshotResponse = detectedLanguage === 'hi-IN' ? "Screenshot le raha hun!" : "Taking screenshot!";
-        let screenshotAudio = null;
-        try {
-          screenshotAudio = await generateSpeechWithVoice(screenshotResponse, detectedLanguage, detectedLanguage);
-        } catch (e) { /* ignore */ }
-        return res.json({ type, response: screenshotResponse, audioUrl: screenshotAudio || audioUrl, language: detectedLanguage });
+        return res.json({ type, response: assistantResponse, audioUrl, language: detectedLanguage });
       case "enable_camera":
-        const cameraOnResponse = detectedLanguage === 'hi-IN' ? "Camera on kar raha hun!" : "Enabling camera!";
-        return res.json({ type, response: cameraOnResponse, audioUrl, language: detectedLanguage });
+        return res.json({ type, response: assistantResponse, audioUrl, language: detectedLanguage });
       case "disable_camera":
-        const cameraOffResponse = detectedLanguage === 'hi-IN' ? "Camera off kar raha hun!" : "Disabling camera!";
-        return res.json({ type, response: cameraOffResponse, audioUrl, language: detectedLanguage });
+        return res.json({ type, response: assistantResponse, audioUrl, language: detectedLanguage });
       case "visual_search":
-        // For visual search, we need to trigger the actual camera capture and analysis
-        const visualSearchResponse = detectedLanguage === 'hi-IN' ? "Camera se dekh raha hun..." : "Analyzing camera feed...";
-        return res.json({ type, response: visualSearchResponse, audioUrl, language: detectedLanguage, action: "capture_and_search" });
+        return res.json({ type, response: assistantResponse, audioUrl, language: detectedLanguage, action: "capture_and_search" });
       case "whatsapp_monitor":
-        const monitorResponse = detectedLanguage === 'hi-IN' ? "WhatsApp message monitoring toggle kar raha hun!" : "Toggling WhatsApp message monitoring!";
-        return res.json({ type, response: monitorResponse, audioUrl, language: detectedLanguage, action: "toggle_whatsapp_monitoring" });
+        return res.json({ type, response: assistantResponse, audioUrl, language: detectedLanguage, action: "toggle_whatsapp_monitoring" });
       case "whatsapp_message":
         const contact = gemResult.contact || "";
         const message = gemResult.message || "Hi";
         let phone = gemResult.phone || "";
         
-        // If no phone provided, check saved contacts
         if (!phone && contact && user.contacts) {
           phone = user.contacts.get(contact.toLowerCase());
-          console.log(`📞 Retrieved saved number for ${contact}: ${phone}`);
         }
         
         if (phone) {
-          // Save contact if new phone number provided
           if (gemResult.phone && contact) {
             if (!user.contacts) user.contacts = new Map();
             user.contacts.set(contact.toLowerCase(), phone);
             await user.save();
-            console.log(`💾 Saved contact: ${contact} -> ${phone}`);
           }
-          
-          // Open WhatsApp Web with the contact and pre-filled message
           const msgUrl = `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
-          const msgResponse = `Opening WhatsApp to send "${message}" to ${contact}. Click send when WhatsApp opens.`;
-          let msgAudio = null;
-          try {
-            msgAudio = await generateSpeechWithVoice(msgResponse, detectedLanguage, detectedLanguage);
-          } catch (e) { /* ignore */ }
-          return res.json({ type, response: msgResponse, action: "open_url", url: msgUrl, audioUrl: msgAudio || audioUrl, language: detectedLanguage });
+          return res.json({ type, response: assistantResponse, action: "open_url", url: msgUrl, audioUrl, language: detectedLanguage });
         } else {
-          // Fallback without phone number
-          const msgResponse = `To message ${contact}, I need their phone number. Please say "message ${contact} at" followed by their number.`;
-          let msgAudio = null;
-          try {
-            msgAudio = await generateSpeechWithVoice(msgResponse, detectedLanguage, detectedLanguage);
-          } catch (e) { /* ignore */ }
-          return res.json({ type: "general", response: msgResponse, audioUrl: msgAudio || audioUrl, language: detectedLanguage });
+          return res.json({ type: "general", response: assistantResponse, audioUrl, language: detectedLanguage });
         }
       case "whatsapp_call":
         const callContact = gemResult.contact || "contact";
         let callPhone = gemResult.phone || "";
         
-        // If no phone provided, check saved contacts
         if (!callPhone && callContact && user.contacts) {
           callPhone = user.contacts.get(callContact.toLowerCase());
-          console.log(`📞 Retrieved saved number for ${callContact}: ${callPhone}`);
         }
         
         if (callPhone) {
-          // Save contact if new phone number provided
           if (gemResult.phone && callContact) {
             if (!user.contacts) user.contacts = new Map();
             user.contacts.set(callContact.toLowerCase(), callPhone);
             await user.save();
-            console.log(`💾 Saved contact: ${callContact} -> ${callPhone}`);
           }
-          
-          // Open WhatsApp Web with the contact
           const callUrl = `https://wa.me/${callPhone}`;
-          const callResponse = `Opening WhatsApp to call ${callContact}. Click the call button when WhatsApp opens.`;
-          let callAudio = null;
-          try {
-            callAudio = await generateSpeechWithVoice(callResponse, detectedLanguage, detectedLanguage);
-          } catch (e) { /* ignore */ }
-          return res.json({ type, response: callResponse, action: "open_url", url: callUrl, audioUrl: callAudio || audioUrl, language: detectedLanguage });
+          return res.json({ type, response: assistantResponse, action: "open_url", url: callUrl, audioUrl, language: detectedLanguage });
         } else {
-          // Fallback - ask for phone number
-          const callResponse = `To call ${callContact}, I need their phone number. Please say "call ${callContact} at" followed by their number.`;
-          let callAudio = null;
-          try {
-            callAudio = await generateSpeechWithVoice(callResponse, detectedLanguage, detectedLanguage);
-          } catch (e) { /* ignore */ }
-          return res.json({ type: "general", response: callResponse, audioUrl: callAudio || audioUrl, language: detectedLanguage });
+          return res.json({ type: "general", response: assistantResponse, audioUrl, language: detectedLanguage });
         }
       case "general":
       default:
