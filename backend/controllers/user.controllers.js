@@ -87,39 +87,36 @@ export const askToAssistant = async (req, res) => {
       result = await geminiResponse(`${historyContext}\nUser: ${command}`, assistantName, userName);
       console.log('🤖 Gemini raw response:', result.substring(0, 200));
       
-      // Parse Gemini response - extract JSON from markdown or direct
-      let jsonString = null;
+      // Parse Gemini response - aggressively extract JSON
+      let jsonString = result.trim();
       
-      // Remove markdown code blocks
-      const markdownMatch = result.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
-      if (markdownMatch) {
-        jsonString = markdownMatch[1].trim();
-      } else {
-        // Try to find JSON object directly
-        const directMatch = result.match(/({[\s\S]*})/);
-        if (directMatch) {
-          jsonString = directMatch[1];
-        }
+      // Remove any remaining markdown blocks
+      jsonString = jsonString
+        .replace(/```json/gi, '')
+        .replace(/```/g, '')
+        .replace(/^\s*json\s*/i, '')
+        .trim();
+      
+      // Extract JSON object if wrapped in text
+      const jsonMatch = jsonString.match(/({[\s\S]*})/);
+      if (jsonMatch) {
+        jsonString = jsonMatch[1];
       }
       
-      if (jsonString) {
-        try {
-          // Clean up HTML entities and escape sequences
-          jsonString = jsonString
-            .replace(/&quot;/g, '"')
-            .replace(/&#39;/g, "'")
-            .replace(/&amp;/g, '&')
-            .replace(/&lt;/g, '<')
-            .replace(/&gt;/g, '>');
-          
-          gemResult = JSON.parse(jsonString);
-          console.log('✅ Parsed successfully - Type:', gemResult.type);
-        } catch (parseError) {
-          console.log('❌ Parse error:', parseError.message);
-          gemResult = { type: "general", userInput: command, response: "I'm having trouble understanding. Please try again." };
-        }
-      } else {
-        console.log('⚠️ No JSON found in Gemini response');
+      try {
+        // Clean HTML entities
+        jsonString = jsonString
+          .replace(/&quot;/g, '"')
+          .replace(/&#39;/g, "'")
+          .replace(/&amp;/g, '&')
+          .replace(/&lt;/g, '<')
+          .replace(/&gt;/g, '>');
+        
+        gemResult = JSON.parse(jsonString);
+        console.log('✅ Parsed - Type:', gemResult.type);
+      } catch (parseError) {
+        console.log('❌ Parse failed:', parseError.message);
+        console.log('❌ Attempted to parse:', jsonString.substring(0, 100));
         gemResult = { type: "general", userInput: command, response: "I'm having trouble understanding. Please try again." };
       }
     } catch (err) {

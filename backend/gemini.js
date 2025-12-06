@@ -145,8 +145,12 @@ User command: ${command}
 
     let responseText = result.data.candidates[0].content.parts[0].text;
     
-    // Strip markdown code blocks if Gemini still adds them
-    responseText = responseText.replace(/```json\s*/g, '').replace(/```\s*/g, '').trim();
+    // Aggressively strip ALL markdown code blocks and formatting
+    responseText = responseText
+      .replace(/```json/gi, '')
+      .replace(/```/g, '')
+      .replace(/^\s*json\s*/i, '')
+      .trim();
     
     return responseText;
   } catch (error) {
