@@ -108,6 +108,21 @@ function Home() {
     
     function useBrowserTTS() {
       console.log(`🔊 Using browser TTS for ${language}:`, text.substring(0, 50) + '...');
+      
+      // Wait for voices to load
+      if (synth.getVoices().length === 0) {
+        console.log('⏳ Waiting for voices to load...');
+        synth.addEventListener('voiceschanged', () => {
+          console.log('✅ Voices loaded, speaking now');
+          speakNow();
+        }, { once: true });
+        return;
+      }
+      
+      speakNow();
+    }
+    
+    function speakNow() {
     try {
       // Enhanced natural pauses for smoother speech
       const naturalText = text
@@ -246,7 +261,7 @@ function Home() {
         setIsWakeWordActive(true);
       }
     }
-    } // Close useBrowserTTS function
+    }
   }
 
   // --- Logout ---
@@ -547,8 +562,14 @@ function Home() {
       if (data && data.response) {
         setAiText(data.response);
         setResponse(data.response);
+        
+        // Speak FIRST, then handle command
+        const language = data.language || 'en-US';
+        console.log('🔊 Speaking response:', data.response.substring(0, 50), 'Language:', language);
+        await speak(data.response, data.audioUrl, language);
+        
+        // Then handle any actions
         await handleCommand(data);
-        await speak(data.response, data.audioUrl, data.language);
       } else {
         setResponse("❌ Sorry, I didn't get a valid response.");
         await speak("Sorry, I didn't get a valid response.", null, 'en-US');
