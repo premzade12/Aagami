@@ -72,7 +72,7 @@ Instructions:
   - "enable_camera": If user says "turn on camera", "enable camera", "camera on", "start camera", "कैमरा चालू करो", "कैमरा ऑन करो".
   - "disable_camera": If user says "turn off camera", "disable camera", "camera off", "stop camera", "कैमरा बंद करो", "कैमरा ऑफ करो".
   - "take_screenshot": If user says "take screenshot", "capture screen", "screenshot लो", "स्क्रीनशॉट लो", "कैप्चर करो".
-  - "visual_search": If user says "capture photo", "कैप्चर फोटो", "फोटो खींचो", "what do you see", "camera से देखो", "identify this".
+  - "visual_search": If user says "capture photo", "take photo", "कैप्चर फोटो", "फोटो खींचो", "फोटो खींचे", "तस्वीर लो", "तस्वीर खींचो", "photo लो", "what do you see", "camera से देखो", "identify this".
   - "facebook_open", "weather-show" → as named.
   - "get_time", "get_date", "get_day", "get_month" → for basic queries.
 
