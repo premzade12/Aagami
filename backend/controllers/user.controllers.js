@@ -395,7 +395,7 @@ export const askToAssistant = async (req, res) => {
       case "disable_camera":
         return res.json({ type, response: assistantResponse, audioUrl, language: detectedLanguage });
       case "visual_search":
-        return res.json({ type, response: assistantResponse, audioUrl, language: detectedLanguage, action: "capture_and_search" });
+        return res.json({ type, response: assistantResponse, audioUrl, language: detectedLanguage });
       case "whatsapp_monitor":
         return res.json({ type, response: assistantResponse, audioUrl, language: detectedLanguage, action: "toggle_whatsapp_monitoring" });
       case "whatsapp_message":
