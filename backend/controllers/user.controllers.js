@@ -84,7 +84,13 @@ export const askToAssistant = async (req, res) => {
     
     try {
       console.log('🔍 Calling Gemini API with command:', command);
-      result = await geminiResponse(`${historyContext}\nUser: ${command}`, assistantName, userName);
+      // Set a timeout for Gemini API call
+      const geminiPromise = geminiResponse(`${historyContext}\nUser: ${command}`, assistantName, userName);
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Gemini timeout')), 4000)
+      );
+      
+      result = await Promise.race([geminiPromise, timeoutPromise]);
       console.log('🤖 Gemini raw response:', result.substring(0, 200));
       
       // Parse Gemini response - aggressively extract JSON
@@ -162,6 +168,10 @@ export const askToAssistant = async (req, res) => {
                  lower.includes('seeing in') && lower.includes('camera') || lower.includes('see in') && lower.includes('camera') ||
                  lower.includes('what do you see') || lower.includes('camera view') || lower.includes('in my camera')) {
         gemResult = { type: 'visual_search', response: 'Analyzing camera feed!' };
+      } else if (lower.includes('capture photo') || lower.includes('take photo') || lower.includes('कैप्चर फोटो') || 
+                 lower.includes('फोटो खींचो') || lower.includes('फोटो खींचे') || lower.includes('तस्वीर लो') || 
+                 lower.includes('तस्वीर खींचो') || lower.includes('photo लो') || lower.includes('फोटो लो')) {
+        gemResult = { type: 'visual_search', response: 'Photo capture kar raha hun!' };
       } else if (lower.includes('monitor whatsapp') || lower.includes('whatsapp monitor') || lower.includes('whatsapp notifications') ||
                  lower.includes('enable whatsapp') || lower.includes('disable whatsapp') || lower.includes('whatsapp alerts') ||
                  lower.includes('whatsapp messages') && (lower.includes('monitor') || lower.includes('notify') || lower.includes('alert'))) {
@@ -215,7 +225,7 @@ export const askToAssistant = async (req, res) => {
         gemResult = { type: 'general', response: introResponse };
       } else {
         // Better Hindi response for unrecognized commands
-        const hindiResponse = `Main samjhi nahi. Aap kripaya clear words mein batayiye - jaise "Google search", "time batao", "YouTube play karo", "camera on karo" ya "screenshot lo".`;
+        const hindiResponse = `Main samjhi nahi. Aap kripaya clear words mein batayiye - jaise "Google search", "time batao", "YouTube play karo", "camera on karo", "photo khincho" ya "screenshot lo".`;
         gemResult = { type: 'general', response: hindiResponse };
       }
     }

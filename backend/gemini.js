@@ -140,7 +140,18 @@ User command: ${command}
             }
           ]
         }
-      ]
+      ],
+      "generationConfig": {
+        "temperature": 0.1,
+        "topK": 1,
+        "topP": 0.8,
+        "maxOutputTokens": 200
+      }
+    }, {
+      timeout: 5000,
+      headers: {
+        'Content-Type': 'application/json'
+      }
     });
 
     if (!result.data?.candidates?.[0]?.content?.parts?.[0]?.text) {
