@@ -156,8 +156,9 @@ export const askToAssistant = async (req, res) => {
         gemResult = { type: 'open_calculator', response: 'I\'d be happy to open the calculator for you.' };
       } else if (lower.includes('calculator')) {
         gemResult = { type: 'open_calculator', response: 'Of course! I\'ll open the calculator for you.' };
-      } else if (lower.includes('screenshot') || lower.includes('capture screen') || lower.includes('take screenshot')) {
-        gemResult = { type: 'take_screenshot', response: 'Taking a screenshot for you!' };
+      } else if (lower.includes('screenshot') || lower.includes('capture screen') || lower.includes('take screenshot') ||
+                 lower.includes('स्क्रीनशॉट') || lower.includes('screenshot लो') || lower.includes('कैप्चर स्क्रीन') || lower.includes('screen capture')) {
+        gemResult = { type: 'take_screenshot', response: 'Screenshot le raha hun!' };
       } else if (lower.includes('enable') && lower.includes('camera') || lower.includes('camera on') || lower.includes('turn on camera') || lower.includes('start camera') ||
                  lower.includes('कैमरा चालू') || lower.includes('कैमरा ऑन') || lower.includes('camera chalu') || lower.includes('camera on karo')) {
         gemResult = { type: 'enable_camera', response: 'Camera on kar raha hun!' };
