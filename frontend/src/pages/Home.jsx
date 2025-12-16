@@ -360,6 +360,37 @@ function Home() {
     }, 'image/jpeg', 0.8);
   }
 
+  async function capturePhotoFromCamera() {
+    if (!videoRef.current || !canvasRef.current) {
+      speak('Camera nahi mila. Pehle camera on kariye.', null, 'hi-IN');
+      return;
+    }
+    
+    const canvas = canvasRef.current;
+    const ctx = canvas.getContext('2d');
+    canvas.width = videoRef.current.videoWidth || 640;
+    canvas.height = videoRef.current.videoHeight || 480;
+    ctx.drawImage(videoRef.current, 0, 0);
+    
+    canvas.toBlob((blob) => {
+      if (!blob) {
+        speak('Photo capture nahi hua. Phir try kariye.', null, 'hi-IN');
+        return;
+      }
+      
+      // Save photo to downloads
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `camera-photo-${new Date().toISOString().slice(0, 19).replace(/:/g, '-')}.jpg`;
+      a.click();
+      URL.revokeObjectURL(url);
+      
+      speak('Photo capture ho gaya aur download mein save ho gaya!', null, 'hi-IN');
+      console.log('📷 Photo saved to downloads');
+    }, 'image/jpeg', 0.9);
+  }
+
   // --- Screenshot Function ---
   async function takeScreenshot() {
     try {
@@ -382,12 +413,16 @@ function Home() {
           a.download = `screenshot-${new Date().toISOString().slice(0, 19).replace(/:/g, '-')}.png`;
           a.click();
           URL.revokeObjectURL(url);
+          
+          speak('Screenshot le liya aur download mein save ho gaya!', null, 'hi-IN');
+          console.log('📸 Screenshot saved to downloads');
         });
         
         stream.getTracks().forEach(track => track.stop());
       });
     } catch (err) {
       console.log('Screenshot failed:', err);
+      speak('Screenshot nahi le saka. Permission allow kariye.', null, 'hi-IN');
     }
   }
 
@@ -456,9 +491,13 @@ function Home() {
       console.log('📷 Disabling camera');
       return disableCamera();
     }
-    if (type === "visual_search" || type === "search_camera" || action === "capture_and_search") {
+    if (type === "visual_search" && action === "capture_and_search") {
       console.log('🔍 Visual search - capturing and analyzing');
       return captureAndSearch();
+    }
+    if (type === "visual_search" && !action) {
+      console.log('📷 Capture photo from camera');
+      return capturePhotoFromCamera();
     }
     if (type === "whatsapp_monitor" || type === "monitor_whatsapp" || action === "toggle_whatsapp_monitoring") {
       console.log('📱 Toggling WhatsApp monitoring');
