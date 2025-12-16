@@ -158,8 +158,9 @@ export const askToAssistant = async (req, res) => {
         gemResult = { type: 'open_calculator', response: 'Of course! I\'ll open the calculator for you.' };
       } else if (lower.includes('screenshot') || lower.includes('capture screen') || lower.includes('take screenshot')) {
         gemResult = { type: 'take_screenshot', response: 'Taking a screenshot for you!' };
-      } else if (lower.includes('enable') && lower.includes('camera') || lower.includes('camera on') || lower.includes('turn on camera') || lower.includes('start camera')) {
-        gemResult = { type: 'enable_camera', response: 'Enabling camera for you!' };
+      } else if (lower.includes('enable') && lower.includes('camera') || lower.includes('camera on') || lower.includes('turn on camera') || lower.includes('start camera') ||
+                 lower.includes('कैमरा चालू') || lower.includes('कैमरा ऑन') || lower.includes('camera chalu') || lower.includes('camera on karo')) {
+        gemResult = { type: 'enable_camera', response: 'Camera on kar raha hun!' };
       } else if (lower.includes('disable') && lower.includes('camera') || lower.includes('camera off') || lower.includes('turn off camera') || lower.includes('stop camera')) {
         gemResult = { type: 'disable_camera', response: 'Disabling camera!' };
       } else if (lower.includes('search camera') || lower.includes('visual search') || lower.includes('search what i see') || lower.includes('identify this') || 
