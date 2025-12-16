@@ -227,25 +227,49 @@ export const askToAssistant = async (req, res) => {
     const userInput = gemResult.userInput || command;
     let assistantResponse = gemResult.response || "I'm here to help you!";
     
-    // Check if response contains nested JSON (Gemini sometimes does this)
-    if (assistantResponse.includes('```json') || (assistantResponse.includes('{') && assistantResponse.includes('"type"'))) {
-      console.log('⚠️ Response contains nested JSON, extracting actual text...');
+    // ALWAYS check if response contains nested JSON structure
+    if (assistantResponse.includes('```json') || assistantResponse.includes('{"type"') || assistantResponse.includes('\"type\"')) {
+      console.log('⚠️ Detected nested JSON, extracting...');
       
-      // Remove markdown blocks first
-      assistantResponse = assistantResponse.replace(/```json/gi, '').replace(/```/g, '');
+      // Clean markdown first
+      let cleanResponse = assistantResponse.replace(/```json/gi, '').replace(/```/g, '').trim();
       
-      // Try to parse and extract the nested response field
+      // Try multiple extraction methods
       try {
-        const jsonMatch = assistantResponse.match(/\{[\s\S]*\}/);
-        if (jsonMatch) {
-          const nestedJson = JSON.parse(jsonMatch[0].replace(/\\n/g, '\n').replace(/\\"/g, '"'));
-          if (nestedJson.response) {
-            assistantResponse = nestedJson.response;
-            console.log('✅ Extracted nested response successfully');
+        // Method 1: Direct JSON parse
+        const parsed = JSON.parse(cleanResponse);
+        if (parsed.response) {
+          assistantResponse = parsed.response;
+          console.log('✅ Method 1: Direct parse successful');
+        }
+      } catch (e1) {
+        try {
+          // Method 2: Extract JSON object from text
+          const jsonMatch = cleanResponse.match(/\{[\s\S]*\}/);
+          if (jsonMatch) {
+            const jsonStr = jsonMatch[0]
+              .replace(/\\n/g, '\n')
+              .replace(/\\"/g, '"')
+              .replace(/\\'/g, "'");
+            const parsed = JSON.parse(jsonStr);
+            if (parsed.response) {
+              assistantResponse = parsed.response;
+              console.log('✅ Method 2: Regex extraction successful');
+            }
+          }
+        } catch (e2) {
+          // Method 3: Regex extract response field directly
+          const responseMatch = cleanResponse.match(/"response"\s*:\s*"([^"]+(?:\\.[^"]*)*)"/); 
+          if (responseMatch && responseMatch[1]) {
+            assistantResponse = responseMatch[1]
+              .replace(/\\n/g, ' ')
+              .replace(/\\'/g, "'")
+              .replace(/\\"/g, '"');
+            console.log('✅ Method 3: Direct response extraction successful');
+          } else {
+            console.log('⚠️ All extraction methods failed, using original');
           }
         }
-      } catch (e) {
-        console.log('⚠️ Could not parse nested JSON, using as-is');
       }
     }
     
