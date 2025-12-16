@@ -114,7 +114,7 @@ Important:
 
 CRITICAL OUTPUT FORMAT:
 - Output ONLY a valid JSON object
-- NO markdown code blocks (no ```json or ```)
+- NO markdown code blocks (no backticks or json formatting)
 - NO explanations before or after the JSON
 - NO extra text
 - Just the raw JSON object starting with { and ending with }
