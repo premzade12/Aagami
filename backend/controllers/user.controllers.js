@@ -79,22 +79,22 @@ export const askToAssistant = async (req, res) => {
     const userName = user.name || "User";
     const assistantName = user.assistantName || "Assistant";
 
-    // Try Gemini first, fallback to simple parsing
+    // Try Groq first, fallback to simple parsing
     let result;
     let gemResult;
     
     try {
       console.log('🔍 Calling Groq API with command:', command);
-      // Try Groq first (free with higher limits), fallback to local system
+      // Try Groq first (free with higher limits)
       const groqPromise = groqResponse(command, assistantName, userName);
       const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('API timeout')), 5000)
+        setTimeout(() => reject(new Error('API timeout')), 8000)
       );
       
       result = await Promise.race([groqPromise, timeoutPromise]);
       console.log('🤖 Groq raw response:', result.substring(0, 200));
       
-      // Parse Gemini response - aggressively extract JSON
+      // Parse Groq response - aggressively extract JSON
       let jsonString = result.trim();
       
       // Remove any remaining markdown blocks
@@ -120,15 +120,36 @@ export const askToAssistant = async (req, res) => {
           .replace(/&gt;/g, '>');
         
         gemResult = JSON.parse(jsonString);
-        console.log('✅ Parsed - Type:', gemResult.type);
+        console.log('✅ Groq Parsed - Type:', gemResult.type, 'Response:', gemResult.response?.substring(0, 50));
       } catch (parseError) {
-        console.log('❌ Parse failed:', parseError.message);
+        console.log('❌ Groq Parse failed:', parseError.message);
         console.log('❌ Attempted to parse:', jsonString.substring(0, 100));
-        gemResult = { type: "general", userInput: command, response: "Main samjhi nahi. Kripaya phir se try kariye." };
+        
+        // Try Gemini as fallback
+        try {
+          console.log('🔄 Trying Gemini as fallback...');
+          const geminiResult = await geminiResponse(command, assistantName, userName);
+          console.log('🤖 Gemini fallback response:', geminiResult.substring(0, 200));
+          
+          let geminiJson = geminiResult.trim()
+            .replace(/```json/gi, '')
+            .replace(/```/g, '')
+            .trim();
+          
+          const geminiMatch = geminiJson.match(/({[\s\S]*})/);
+          if (geminiMatch) {
+            geminiJson = geminiMatch[1];
+          }
+          
+          gemResult = JSON.parse(geminiJson);
+          console.log('✅ Gemini Parsed - Type:', gemResult.type);
+        } catch (geminiError) {
+          console.log('❌ Gemini also failed:', geminiError.message);
+          gemResult = { type: "general", userInput: command, response: "Main samjhi nahi. Kripaya phir se try kariye." };
+        }
       }
     } catch (err) {
       console.error("❌ Groq API failed, using fallback:", err.message);
-      console.error("❌ Full error details:", err.response?.data || err);
       console.log('🔄 Switching to fallback system...');
       
       // Fallback system
