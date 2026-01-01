@@ -112,8 +112,10 @@ export const askToAssistant = async (req, res) => {
       console.log('✅ Groq Parsed - Type:', gemResult.type, 'Response:', gemResult.response?.substring(0, 50));
       
     } catch (err) {
-      console.error("❌ Groq API failed, using fallback:", err.message);
-      console.log('🔄 Switching to fallback system...');
+      console.error("❌ Groq API failed:", err.message);
+      // Only use fallback if Groq completely fails
+      gemResult = { type: "general", userInput: command, response: "Sorry, I couldn't process your request. Please try again." };
+    }
       
       // Fallback system
       const lower = command.toLowerCase();
@@ -210,10 +212,6 @@ export const askToAssistant = async (req, res) => {
                  lower.includes('tum kaun ho') || lower.includes('aap kaun hain') || lower.includes('apna parichay')) {
         const introResponse = `Hello! I'm ${assistantName}, your intelligent virtual assistant created by Prem Zade. I'm here to help you with various tasks like searching Google, playing YouTube videos, opening applications, taking screenshots, managing your camera, and much more. I can understand both English and Hindi, and I'm always ready to assist you. What would you like me to help you with today?`;
         gemResult = { type: 'general', response: introResponse };
-      } else {
-        // Better Hindi response for unrecognized commands
-        const hindiResponse = `Main samjhi nahi. Aap kripaya clear words mein batayiye - jaise "Google search", "time batao", "YouTube play karo", "camera on karo", "photo khincho" ya "screenshot lo".`;
-        gemResult = { type: 'general', response: hindiResponse };
       }
     }
 
