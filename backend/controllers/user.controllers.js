@@ -1,11 +1,11 @@
 // user.controllers.js
 
 import uploadOnCloudinary from "../config/cloudinary.js";
-import geminiResponse from "../gemini.js";
 import groqResponse from "../groq.js";
+// Removed Gemini API - using Groq only
 import User from "../models/user.model.js";
 import moment from "moment";
-import geminiCorrectCode from "../geminiCorrectCode.js";
+// Removed geminiCorrectCode import
 import axios from "axios";
 import { generateSpeechWithVoice, getAvailableVoices } from "../services/voiceManager.js";
 import { GoogleAuth } from 'google-auth-library';
@@ -79,26 +79,16 @@ export const askToAssistant = async (req, res) => {
     const userName = user.name || "User";
     const assistantName = user.assistantName || "Assistant";
 
-    // Try Groq first, fallback to simple parsing
-    let result;
+    // Use Groq API only
     let gemResult;
     
     try {
       console.log('🔍 Calling Groq API with command:', command);
-      // Try Groq first (free with higher limits)
-      const groqPromise = groqResponse(command, assistantName, userName);
-      const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('API timeout')), 8000)
-      );
-      
-      result = await Promise.race([groqPromise, timeoutPromise]);
+      const result = await groqResponse(command, assistantName, userName);
       console.log('🤖 Groq raw response:', result.substring(0, 200));
       
-      // Parse Groq response - aggressively extract JSON
-      let jsonString = result.trim();
-      
-      // Remove any remaining markdown blocks
-      jsonString = jsonString
+      // Parse Groq response
+      let jsonString = result.trim()
         .replace(/```json/gi, '')
         .replace(/```/g, '')
         .replace(/^\s*json\s*/i, '')
@@ -110,44 +100,17 @@ export const askToAssistant = async (req, res) => {
         jsonString = jsonMatch[1];
       }
       
-      try {
-        // Clean HTML entities
-        jsonString = jsonString
-          .replace(/&quot;/g, '"')
-          .replace(/&#39;/g, "'")
-          .replace(/&amp;/g, '&')
-          .replace(/&lt;/g, '<')
-          .replace(/&gt;/g, '>');
-        
-        gemResult = JSON.parse(jsonString);
-        console.log('✅ Groq Parsed - Type:', gemResult.type, 'Response:', gemResult.response?.substring(0, 50));
-      } catch (parseError) {
-        console.log('❌ Groq Parse failed:', parseError.message);
-        console.log('❌ Attempted to parse:', jsonString.substring(0, 100));
-        
-        // Try Gemini as fallback
-        try {
-          console.log('🔄 Trying Gemini as fallback...');
-          const geminiResult = await geminiResponse(command, assistantName, userName);
-          console.log('🤖 Gemini fallback response:', geminiResult.substring(0, 200));
-          
-          let geminiJson = geminiResult.trim()
-            .replace(/```json/gi, '')
-            .replace(/```/g, '')
-            .trim();
-          
-          const geminiMatch = geminiJson.match(/({[\s\S]*})/);
-          if (geminiMatch) {
-            geminiJson = geminiMatch[1];
-          }
-          
-          gemResult = JSON.parse(geminiJson);
-          console.log('✅ Gemini Parsed - Type:', gemResult.type);
-        } catch (geminiError) {
-          console.log('❌ Gemini also failed:', geminiError.message);
-          gemResult = { type: "general", userInput: command, response: "Main samjhi nahi. Kripaya phir se try kariye." };
-        }
-      }
+      // Clean HTML entities
+      jsonString = jsonString
+        .replace(/&quot;/g, '"')
+        .replace(/&#39;/g, "'")
+        .replace(/&amp;/g, '&')
+        .replace(/&lt;/g, '<')
+        .replace(/&gt;/g, '>');
+      
+      gemResult = JSON.parse(jsonString);
+      console.log('✅ Groq Parsed - Type:', gemResult.type, 'Response:', gemResult.response?.substring(0, 50));
+      
     } catch (err) {
       console.error("❌ Groq API failed, using fallback:", err.message);
       console.log('🔄 Switching to fallback system...');
@@ -471,13 +434,15 @@ export const askToAssistant = async (req, res) => {
   }
 };
 
-// ✅ Correct Code
+// ✅ Correct Code using Groq only
 export const correctCode = async (req, res) => {
   try {
     const { code } = req.body;
     if (!code) return res.status(400).json({ corrected: "No code provided" });
 
-    const corrected = await geminiCorrectCode(code);
+    // Use Groq for code correction
+    const prompt = `Fix and improve this code:\n\n${code}\n\nReturn only the corrected code without explanations.`;
+    const corrected = await groqResponse(prompt, "CodeAssistant", "Developer");
     return res.status(200).json({ corrected });
   } catch (error) {
     console.error("❌ Code correction error:", error);
@@ -524,89 +489,7 @@ export const getHistory = async (req, res) => {
   }
 };
 
-// ✅ Test Gemini API
-export const testGemini = async (req, res) => {
-  try {
-    console.log('🔍 Testing Gemini API directly...');
-    const apiUrl = process.env.GEMINI_API_URL;
-    const apiKey = process.env.GEMINI_API_KEY;
-    
-    console.log('API URL:', apiUrl);
-    console.log('API Key exists:', !!apiKey);
-    
-    const testPayload = {
-      "contents": [{
-        "parts": [{
-          "text": "Hello, just testing. Respond with: {\"type\": \"general\", \"response\": \"Test successful\"}"
-        }]
-      }]
-    };
-    
-    const result = await axios.post(`${apiUrl}?key=${apiKey}`, testPayload);
-    console.log('✅ Direct API test successful:', result.data);
-    
-    res.json({ success: true, result: result.data });
-  } catch (error) {
-    console.error('❌ Direct Gemini API test failed:');
-    console.error('Status:', error.response?.status);
-    console.error('Data:', JSON.stringify(error.response?.data, null, 2));
-    console.error('Message:', error.message);
-    
-    res.status(500).json({ 
-      success: false, 
-      error: {
-        status: error.response?.status,
-        data: error.response?.data,
-        message: error.message
-      }
-    });
-  }
-};
-
-// ✅ Test Vision API
-export const testVision = async (req, res) => {
-  try {
-    const apiKey = process.env.GEMINI_API_KEY;
-    const visionApiUrl = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent";
-    
-    // Test with image data
-    const testPayload = {
-      "contents": [{
-        "parts": [
-          { "text": "What do you see?" },
-          {
-            "inline_data": {
-              "mime_type": "image/jpeg",
-              "data": "/9j/4AAQSkZJRgABAQEAYABgAAD/2wBDAAEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQH/2wBDAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQH/wAARCAABAAEDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAv/xAAUEAEAAAAAAAAAAAAAAAAAAAAA/8QAFQEBAQAAAAAAAAAAAAAAAAAAAAX/xAAUEQEAAAAAAAAAAAAAAAAAAAAA/9oADAMBAAIRAxEAPwA/8A"
-            }
-          }
-        ]
-      }]
-    };
-    
-    console.log('🔍 Testing Vision API with key:', apiKey?.substring(0, 10) + '...');
-    const result = await axios.post(`${visionApiUrl}?key=${apiKey}`, testPayload);
-    console.log('✅ Vision API Success:', result.data);
-    res.json({ success: true, result: result.data });
-    
-  } catch (error) {
-    console.error('❌ Vision API Error Details:');
-    console.error('- Status:', error.response?.status);
-    console.error('- Status Text:', error.response?.statusText);
-    console.error('- Data:', JSON.stringify(error.response?.data, null, 2));
-    console.error('- Message:', error.message);
-    
-    res.status(500).json({ 
-      success: false, 
-      error: {
-        status: error.response?.status,
-        statusText: error.response?.statusText,
-        data: error.response?.data,
-        message: error.message
-      }
-    });
-  }
-};
+// Removed Gemini test functions
 
 // ✅ Get Available Voices
 export const getVoices = async (req, res) => {

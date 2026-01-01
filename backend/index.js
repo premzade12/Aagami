@@ -8,7 +8,7 @@ import cors from "cors";
 import cookieParser from "cookie-parser";
 import userRouter from "./routes/user.routes.js";
 import windowsRouter from "./routes/windows.routes.js";
-import geminiResponse from "./gemini.js";
+// Removed Gemini import - using Groq only
 
 // Load environment variables
 dotenv.config();
