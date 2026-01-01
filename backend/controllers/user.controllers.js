@@ -209,7 +209,7 @@ export const askToAssistant = async (req, res) => {
         gemResult = { type: 'general', response: 'Haan bilkul! Main perfectly working hun. Aap kya chahti hain?' };
       } else if (lower.includes('hello') || lower.includes('hi') || lower.includes('namaste') || lower.includes('नमस्ते')) {
         gemResult = { type: 'general', response: 'Namaste! Main aapki virtual assistant hun. Kaise madad kar sakti hun?' };
-      } else if (lower.includes('how are you') || lower.includes('kaise ho') || lower.includes('कैसे हो')) {
+      } else if (lower.includes('how are you') || lower.includes('kaise ho') || lower.includes('कैसे हो') || lower.includes('हाउ आर यू')) {
         gemResult = { type: 'general', response: 'Main bilkul theek hun! Aap batayiye, kya kaam hai?' };
       } else if (lower.includes('kya kar sakte') || lower.includes('what can you do') || lower.includes('help') || lower.includes('मदद') || lower.includes('capabilities')) {
         gemResult = { type: 'general', response: 'Main bahut kuch kar sakti hun! Main Google search kar sakti hun, YouTube videos play kar sakti hun, time bata sakti hun, calculator khol sakti hun, screenshot le sakti hun, camera on/off kar sakti hun, aur visual search bhi kar sakti hun. Aap kya chahti hain?' };
