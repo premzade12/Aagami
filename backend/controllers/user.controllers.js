@@ -84,10 +84,10 @@ export const askToAssistant = async (req, res) => {
     
     try {
       console.log('🔍 Calling Gemini API with command:', command);
-      // Set a timeout for Gemini API call
+      // Set a timeout for Gemini API call - reduced to 3 seconds for faster fallback
       const geminiPromise = geminiResponse(`${historyContext}\nUser: ${command}`, assistantName, userName);
       const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Gemini timeout')), 4000)
+        setTimeout(() => reject(new Error('Gemini timeout')), 3000)
       );
       
       result = await Promise.race([geminiPromise, timeoutPromise]);
@@ -123,7 +123,7 @@ export const askToAssistant = async (req, res) => {
       } catch (parseError) {
         console.log('❌ Parse failed:', parseError.message);
         console.log('❌ Attempted to parse:', jsonString.substring(0, 100));
-        gemResult = { type: "general", userInput: command, response: "I'm having trouble understanding. Please try again." };
+        gemResult = { type: "general", userInput: command, response: "Main samjhi nahi. Kripaya phir se try kariye." };
       }
     } catch (err) {
       console.error("❌ Gemini API failed, using fallback:", err.message);
