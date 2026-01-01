@@ -85,10 +85,10 @@ export const askToAssistant = async (req, res) => {
     
     try {
       console.log('🔍 Calling Groq API with command:', command);
-      // Try Groq first (free with higher limits), fallback to Gemini
+      // Try Groq first (free with higher limits), fallback to local system
       const groqPromise = groqResponse(command, assistantName, userName);
       const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('API timeout')), 2000)
+        setTimeout(() => reject(new Error('API timeout')), 5000)
       );
       
       result = await Promise.race([groqPromise, timeoutPromise]);
@@ -127,7 +127,7 @@ export const askToAssistant = async (req, res) => {
         gemResult = { type: "general", userInput: command, response: "Main samjhi nahi. Kripaya phir se try kariye." };
       }
     } catch (err) {
-      console.error("❌ Gemini API failed, using fallback:", err.message);
+      console.error("❌ Groq API failed, using fallback:", err.message);
       console.error("❌ Full error details:", err.response?.data || err);
       console.log('🔄 Switching to fallback system...');
       
