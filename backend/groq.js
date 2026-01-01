@@ -49,7 +49,7 @@ User command: ${command}`;
     }
     
     const result = await axios.post(apiUrl, {
-      "model": "llama-3.1-70b-versatile",
+      "model": "llama-3.1-8b-instant",
       "messages": [
         {
           "role": "user",
