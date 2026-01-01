@@ -2,6 +2,7 @@
 
 import uploadOnCloudinary from "../config/cloudinary.js";
 import geminiResponse from "../gemini.js";
+import groqResponse from "../groq.js";
 import User from "../models/user.model.js";
 import moment from "moment";
 import geminiCorrectCode from "../geminiCorrectCode.js";
@@ -83,15 +84,15 @@ export const askToAssistant = async (req, res) => {
     let gemResult;
     
     try {
-      console.log('🔍 Calling Gemini API with command:', command);
-      // Set a timeout for Gemini API call - reduced to 3 seconds for faster fallback
-      const geminiPromise = geminiResponse(`${historyContext}\nUser: ${command}`, assistantName, userName);
+      console.log('🔍 Calling Groq API with command:', command);
+      // Try Groq first (free with higher limits), fallback to Gemini
+      const groqPromise = groqResponse(command, assistantName, userName);
       const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Gemini timeout')), 3000)
+        setTimeout(() => reject(new Error('API timeout')), 2000)
       );
       
-      result = await Promise.race([geminiPromise, timeoutPromise]);
-      console.log('🤖 Gemini raw response:', result.substring(0, 200));
+      result = await Promise.race([groqPromise, timeoutPromise]);
+      console.log('🤖 Groq raw response:', result.substring(0, 200));
       
       // Parse Gemini response - aggressively extract JSON
       let jsonString = result.trim();
