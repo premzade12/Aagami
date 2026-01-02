@@ -84,7 +84,7 @@ export const askToAssistant = async (req, res) => {
     
     try {
       console.log('🔍 Calling Groq API with command:', command);
-      const result = await groqResponse(command, assistantName, userName);
+      const result = await groqResponse(command, assistantName, userName, historyContext);
       console.log('🤖 Groq raw response:', result.substring(0, 200));
       
       // Parse Groq response
